@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "simurg-plotter"
+version = "0.1.0"
+description = "Tools for plotting geophysical data"
+authors = ["Artem Vesnin <artemvesnin@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "simurg_plotter"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+cartopy = "^0.22.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
