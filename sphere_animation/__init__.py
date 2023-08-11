@@ -1,0 +1,2 @@
+from sphere_animation.animation import animate_sphere
+from sphere_animation.utils import plot_sphere
