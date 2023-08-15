@@ -12,7 +12,8 @@ Features
 
 * Global data plot
 
-.. |Global map with sparse data| image:: docs/img/global_sparse.png
+.. image:: docs/img/global_sparse.png
+    :alt: Global map with sparse data
     :width: 600
 
 * Global map plot
@@ -38,9 +39,11 @@ Installation
 
 Make virtual environment with conda (optional):
 
+```bash
     conda create -n simurg_plotter python=3.10
     conda deactivate
     conda activate simurg_plotter
+```
 
 Install `poetry`:
 
