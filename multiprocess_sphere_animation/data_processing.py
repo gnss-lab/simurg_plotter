@@ -1,5 +1,4 @@
 import h5py
-import pandas as pd
 import numpy as np
 
 def get_all_data(file_path):

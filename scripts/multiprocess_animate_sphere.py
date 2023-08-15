@@ -5,7 +5,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    file_path = 'files/roti_2015_254_-90_90_N_-180_180_E_3a01.h5'
+    file_path = 'files/...'
     central_longitude = 37.6156  # Долгота
     central_latitude = 55.7522  # Широта
 

@@ -1,4 +1,4 @@
-from .animation import animate_sphere
+from animate_sphere.animation import animate_sphere
 
 if __name__ == '__main__':
     file_path = 'files/...'
