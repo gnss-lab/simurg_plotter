@@ -39,11 +39,10 @@ Installation
 
 Make virtual environment with conda (optional):
 
-```bash
+.. code-block:: bash
     conda create -n simurg_plotter python=3.10
     conda deactivate
     conda activate simurg_plotter
-```
 
 Install `poetry`:
 
