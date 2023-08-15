@@ -12,23 +12,27 @@ Features
 
 * Global data plot
 
-.. |Global map with sparse data| image:: docs/img/global_sparse.png
+.. image:: docs/img/global_sparse.png
+    :alt: Global map with sparse data
     :width: 600
 
 * Global map plot
 
-.. |Global map on regular grid| image:: docs/img/global_regular.png
+.. image:: docs/img/global_regular.png
+    :alt: Global map on regular grid
     :width: 600
 
 * Regional data plot
 
-.. |Regional map with sparse data| image:: docs/img/regional_sparse.png
+.. image:: docs/img/regional_sparse.png
     :width: 600
+    :alt: Regional map with sparse data 
 
 * Distance-time plot (under development)
 
-.. |Distance time plot| image:: docs/img/distance_time.png
+.. image:: docs/img/distance_time.png
     :width: 600
+    :alt: Distance time plot 
 
 * Round Earth projection (under development)    
 * Animation plots (under development)
@@ -38,15 +42,21 @@ Installation
 
 Make virtual environment with conda (optional):
 
+.. code-block:: bash
+
     conda create -n simurg_plotter python=3.10
     conda deactivate
     conda activate simurg_plotter
 
 Install `poetry`:
 
+.. code-block:: bash
+
     pip install poetry
 
 Install project:
+
+.. code-block:: bash
 
     poetry install
 
