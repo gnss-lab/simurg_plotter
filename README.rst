@@ -32,10 +32,19 @@ Features
 
 .. image:: docs/img/distance_time.png
     :width: 600
-    :alt: Distance time plot 
+    :alt: Distance time plot
 
-* Round Earth projection (under development)    
+* Round Earth projection (under development)
+
+.. image:: docs/img/round_earth_projection.png
+   :width: 400
+   :alt: Animation plots
+
 * Animation plots (under development)
+
+.. image:: docs/gif/animation_plots.gif
+   :width: 400
+   :alt: Animation plots
 
 Installation
 ------------
