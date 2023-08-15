@@ -1,8 +1,8 @@
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from sphere_animation.animation import plot_sphere
-from sphere_animation.utils import get_all_data
+from simurg_plotter.sphere_animation.animation import plot_sphere
+from simurg_plotter.sphere_animation.utils import get_all_data
 
 if __name__ == '__main__':
     file_path = 'files/...'

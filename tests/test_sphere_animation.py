@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 
-from sphere_animation.utils import plot_sphere, get_all_data
+from simurg_plotter.sphere_animation.utils import plot_sphere, get_all_data
 
 
 @pytest.fixture
