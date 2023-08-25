@@ -38,7 +38,7 @@ def animate_sphere(file_path, central_longitude, central_latitude, vmax=None, vm
 
     projection = ccrs.Orthographic(central_longitude=central_longitude, central_latitude=central_latitude)
     fig, ax = plt.subplots(subplot_kw={'projection': projection})
-    scatter = plot_sphere(central_longitude, central_latitude, all_data[0][1], ax=ax, fig=fig, vmin=vmin, vmax=vmax,
+    scatter = plot_sphere(central_longitude, central_latitude, all_data[0][1], all_data[0][0], ax=ax, fig=fig, vmin=vmin, vmax=vmax,
                           scale_label=scale_label)
     plt.colorbar(scatter, ax=ax, orientation='vertical', label=scale_label, pad=0.05, aspect=20)
 
@@ -55,7 +55,8 @@ def animate_sphere(file_path, central_longitude, central_latitude, vmax=None, vm
         """
         ax.clear()
         group_name = os.path.basename(all_data[i][0])
-        plot_sphere(central_longitude, central_latitude, all_data[i][1], fig=fig, ax=ax, vmin=vmin, vmax=vmax,
+        plot_sphere(central_longitude, central_latitude, all_data[i][1], all_data[i][0], fig=fig, ax=ax, vmin=vmin,
+                    vmax=vmax,
                     scale_label=scale_label)
 
         ax.set_title(convert_to_custom_format(group_name), fontproperties=font)

@@ -1,7 +1,9 @@
+import datetime
 from datetime import datetime
 
 import cartopy.crs as ccrs
 import h5py
+from cartopy.feature.nightshade import Nightshade
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
@@ -18,9 +20,8 @@ LAYOUT_PROP = {
 WATER_MARK = "Created by SIMuRG"
 
 
-def plot_sphere(central_longitude, central_latitude, dataframe, ax=None, fig=None, cmap='jet', vmin=None, vmax=None,
-                scale=None,
-                scale_label=None):
+def plot_sphere(central_longitude, central_latitude, dataframe, date, ax=None, fig=None, cmap='jet', vmin=None,
+                vmax=None, scale=None, scale_label=None):
     """
     Plot data on a sphere using an orthographic projection.
 
@@ -31,6 +32,8 @@ def plot_sphere(central_longitude, central_latitude, dataframe, ax=None, fig=Non
     :param dataframe: A DataFrame containing the data to be plotted.
                       It should have columns 'lon', 'lat', and 'vals'.
     :type dataframe: pandas.DataFrame
+    :param date: The date associated with the data, provided as a string in the format '/data/YYYY-MM-DD HH:MM:SS.ssssss'.
+    :type date: str
     :param ax: The AxesSubplot object to plot on. If not provided,
                a new subplot will be created.
     :type ax: matplotlib.axes._subplots.AxesSubplot, optional
@@ -58,6 +61,11 @@ def plot_sphere(central_longitude, central_latitude, dataframe, ax=None, fig=Non
     ax.gridlines()
     ax.set_global()
 
+    # Add day and night
+    datetime_string = date.split('/')[-1]
+    date = datetime.strptime(datetime_string, '%Y-%m-%d %H:%M:%S.%f')
+    ax.add_feature(Nightshade(date, alpha=0.2))
+
     scatter = ax.scatter(
         dataframe['lon'],
         dataframe['lat'],
@@ -71,12 +79,12 @@ def plot_sphere(central_longitude, central_latitude, dataframe, ax=None, fig=Non
 
     if scale:
         # Create colorbar if scale is True
-        cbar = plt.colorbar(scatter, ax=ax, orientation='vertical', label=scale_label)
+        cbar = plt.colorbar(scatter, ax=ax, orientation='vertical')
+        cbar.set_label(scale_label, fontsize=14)
         cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
     # Create watermark
     fig.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
-
 
     return scatter
 

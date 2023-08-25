@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     data = get_all_data(file_path)
     all_data = [(group, pd.DataFrame(dataset_data)) for group, dataset_data in data.items() if '/data/' in group]
-    scater = plot_sphere(central_longitude, central_latitude, all_data[45][1], vmax=vmax, vmin=vmin, scale=True,
+    scater = plot_sphere(central_longitude, central_latitude, all_data[45][1], all_data[45][0], vmax=vmax, vmin=vmin, scale=True,
                          scale_label="TECu/min")
 
     plt.show()
