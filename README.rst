@@ -34,13 +34,13 @@ Features
     :width: 600
     :alt: Distance time plot
 
-* Round Earth projection (under development)
+* `Round Earth projection <https://github.com/gnss-lab/simurg_plotter/blob/master/scripts/plot_sphere.py>`_ (under development)
 
 .. image:: docs/img/round_earth_projection.png
    :width: 400
    :alt: Animation plots
 
-* Animation plots (under development)
+* `Animation plots <https://github.com/gnss-lab/simurg_plotter/blob/master/scripts/animate_sphere.py>`_ (under development)
 
 .. image:: docs/gif/animation_plots.gif
    :width: 400
