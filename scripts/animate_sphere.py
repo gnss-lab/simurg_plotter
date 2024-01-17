@@ -1,7 +1,7 @@
 from simurg_plotter.sphere_animation.animation import animate_sphere
 
 if __name__ == '__main__':
-    file_path = r"C:\Users\kuzne\OneDrive\Документы\work\files_for_simurg_plotter\roti_2015_254_-90_90_N_-180_180_E_3a01.h5"
+    file_path = r"file.h5"
     central_longitude = 104.280606  # Долгота
     central_latitude = 52.289588  # Широта
 

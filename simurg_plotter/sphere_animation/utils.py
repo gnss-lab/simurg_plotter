@@ -21,7 +21,7 @@ WATER_MARK = "Created by SIMuRG"
 
 
 def plot_sphere(central_longitude, central_latitude, dataframe, date, ax=None, fig=None, cmap='jet', vmin=None,
-                vmax=None, scale=None, scale_label=None):
+                vmax=None, scale=None, scale_label=None, marker_size=None, title=None):
     """
     Plot data on a sphere using an orthographic projection.
 
@@ -50,6 +50,10 @@ def plot_sphere(central_longitude, central_latitude, dataframe, date, ax=None, f
     :type scale: bool, optional
     :param scale_label: Label for the color scale. Default is None.
     :type scale_label: str, optional
+    :param marker_size: Size of the markers. Default is None.
+    :type marker_size: float, optional
+    :param title: Title for the plot. Default is None.
+    :type title: str, optional
     :return: The PathCollection of scatter points on the plot.
     :rtype: matplotlib.collections.PathCollection
     """
@@ -73,6 +77,7 @@ def plot_sphere(central_longitude, central_latitude, dataframe, date, ax=None, f
         cmap=cmap,
         transform=LAYOUT_PROP['transform'],
         marker='o',
+        s=marker_size,
         vmin=vmin,
         vmax=vmax
     )
@@ -84,9 +89,13 @@ def plot_sphere(central_longitude, central_latitude, dataframe, date, ax=None, f
         cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
     # Create watermark
+    if title:
+        ax.set_title(title, fontsize=18)
+
     fig.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
 
     return scatter
+
 
 
 def convert_to_custom_format(input_date, output_format="%Y-%m-%dT%H:%M:%SZ (DOY %j)"):

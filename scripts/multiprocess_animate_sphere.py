@@ -5,7 +5,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    file_path = r'C:\Users\kuzne\OneDrive\Документы\work\files_for_simurg_plotter\roti_2015_254_-90_90_N_-180_180_E_3a01.h5'
+    file_path = r'file.h5'
     central_longitude = 37.6156  # Долгота
     central_latitude = 55.7522  # Широта
 
