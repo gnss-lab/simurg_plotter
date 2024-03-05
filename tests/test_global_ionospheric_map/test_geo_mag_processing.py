@@ -9,7 +9,11 @@ def test_get_uniform_mag_net():
     assert result.shape != (0, 0)
 
 def test_get_gm_contours():
-    pass
+    result = get_gm_contours()
+
+    assert isinstance(result, np.ndarray)
+    assert result.shape != (0, 0)
+
 
 def test_prepare_contours():
     pass
