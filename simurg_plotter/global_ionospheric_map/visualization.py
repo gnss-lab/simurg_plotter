@@ -1,6 +1,6 @@
-from data_processing import prepare_contours, gims_limits
-from data_processing import get_uniform_mag_net
-from data_processing import get_gm_contours
+from .geo_mag_processing import prepare_contours, gims_limits
+from .geo_mag_processing import get_uniform_mag_net
+from .geo_mag_processing import get_gm_contours
 
 import matplotlib
 import matplotlib.pyplot as plt
