@@ -4,15 +4,15 @@ import os
 MAX_DELTA = 5  # degrees
 WITH_MAP = -1  # this needed because of imshow()
 
-def get_uniform_mag_net():
+def get_uniform_mag_net() -> np.ndarray:
     path = os.path.join(os.path.dirname(__file__), "files/mag_grid_geo_grid_2010.dat")
     return np.loadtxt(path)
 
-def get_gm_contours():
+def get_gm_contours() -> np.ndarray:
     path = os.path.join(os.path.dirname(__file__), "files/geo_mag_contours.dat")
     return np.loadtxt(path)
 
-def prepare_contours(geo, contours):
+def prepare_contours(geo: bool, contours: np.ndarray) -> np.ndarray:
     gm_contours = contours
     if geo:
         _lons = (180 + gm_contours[:, 0]) / 5
@@ -35,7 +35,7 @@ def prepare_contours(geo, contours):
             last = i
     return lonlat
 
-def gims_limits(arrs):
+def gims_limits(arrs: list[np.ndarray]) -> list[float]:
     std = 0
     aver = 0
     sigma = 3
