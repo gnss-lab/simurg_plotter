@@ -5,6 +5,7 @@ from geo_mag_processing import get_gm_contours
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import List, Optional
 
 WITH_MAP = -1  # this needed because of imshow()
 
@@ -14,7 +15,7 @@ font = {'family': 'sans-serif',
 
 matplotlib.rc('font', **font)
 
-def plot(gims, fig_path=[], geo=True, **kwargs):
+def plot(gims: List[np.ndarray], fig_path: Optional[List[str]] = [], geo: bool = True, **kwargs: Optional[dict]):
     if len(fig_path) != 0 and len(gims) != len(fig_path):
         msg = f'Path to figures must be provide for each of {len(gims)} maps'
         raise ValueError(msg)
