@@ -5,14 +5,33 @@ MAX_DELTA = 5  # degrees
 WITH_MAP = -1  # this needed because of imshow()
 
 def get_uniform_mag_net():
+    """Load uniform magnetic grid from file.
+
+    :return: Uniform magnetic grid
+    :rtype: np.ndarray
+    """
     path = os.path.join(os.path.dirname(__file__), "files/mag_grid_geo_grid_2010.dat")
     return np.loadtxt(path)
 
 def get_gm_contours():
+    """Load geo-magnetic contours from file.
+
+    :return: Geo-magnetic contours
+    :rtype: np.ndarray
+    """
     path = os.path.join(os.path.dirname(__file__), "files/geo_mag_contours.dat")
     return np.loadtxt(path)
 
 def prepare_contours(geo, contours):
+    """Prepare contours for plotting.
+
+    :param geo: Indicates whether the contours are in geo format
+    :type geo: bool
+    :param contours: Geo-magnetic contours
+    :type contours: np.ndarray
+    :return: Prepared contours
+    :rtype: np.ndarray
+    """
     gm_contours = contours
     if geo:
         _lons = (180 + gm_contours[:, 0]) / 5
@@ -36,6 +55,13 @@ def prepare_contours(geo, contours):
     return lonlat
 
 def gims_limits(arrs):
+    """Calculate limits for GIMS.
+
+    :param arrs: Arrays to calculate limits from
+    :type arrs: list[np.ndarray]
+    :return: Limits for GIMS
+    :rtype: list[float]
+    """
     std = 0
     aver = 0
     sigma = 3
