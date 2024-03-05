@@ -1,2 +1,0 @@
-from .global_ionospheric_map import visualization
-from .global_ionospheric_map import data_processing
