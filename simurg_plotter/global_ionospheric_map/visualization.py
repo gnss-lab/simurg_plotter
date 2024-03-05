@@ -16,6 +16,27 @@ font = {'family': 'sans-serif',
 matplotlib.rc('font', **font)
 
 def plot(gims: List[np.ndarray], fig_path: Optional[List[str]] = [], geo: bool = True, **kwargs: Optional[dict]):
+    """Plot Geo-Magnetic maps.
+
+    :param gims: List of maps to plot
+    :type gims: List[np.ndarray]
+    :param fig_path: List of paths to save figures, defaults to []
+    :type fig_path: Optional[List[str]], optional
+    :param geo: Indicates whether the maps are in geo format, defaults to True
+    :type geo: bool, optional
+    :param **kwargs: Additional keyword arguments:
+        - width: Width of the figure in pixels, defaults to 3000
+        - height: Height of the figure in pixels, defaults to 1500
+        - dpi: Dots per inch of the figure, defaults to 300
+        - gm_contours: Geo-magnetic contours, defaults to get_gm_contours()
+        - only_contours: Flag to plot only contours, defaults to False
+        - titles: List of titles for each map, defaults to None
+        - cmin: Minimum color value for plot, defaults to None
+        - cmax: Maximum color value for plot, defaults to None
+        - vmin: Minimum value for color limit, defaults to None
+        - vmax: Maximum value for color limit, defaults to None
+    :type **kwargs: Optional[dict]
+    """
     if len(fig_path) != 0 and len(gims) != len(fig_path):
         msg = f'Path to figures must be provide for each of {len(gims)} maps'
         raise ValueError(msg)
