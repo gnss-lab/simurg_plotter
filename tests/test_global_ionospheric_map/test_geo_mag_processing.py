@@ -13,8 +13,20 @@ def arrays():
             temp_file.write(response.content)
             temp_file_path = temp_file.name
         arrays = np.load(temp_file_path, allow_pickle=True)
-        print(arrays.shape)
         return arrays
+    else:
+        pytest.fail(f"Failed to download file from {url}. Status code: {response.status_code}")
+
+@pytest.fixture(scope="function")
+def contours():
+    url = "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=maps.npy"
+    response = requests.get(url)
+    if response.status_code == 200:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(response.content)
+            temp_file_path = temp_file.name
+        contours = np.load(temp_file_path, allow_pickle=True)
+        return contours
     else:
         pytest.fail(f"Failed to download file from {url}. Status code: {response.status_code}")
 
@@ -37,6 +49,14 @@ def test_gims_limits(arrays):
 
 
 def test_prepare_contours():
-    pass
+    geo_result = prepare_contours(
+        True, get_gm_contours())
+    non_geo_result = prepare_contours( 
+        False, get_gm_contours())
+    
+    assert isinstance(geo_result, np.ndarray)
+    assert isinstance(non_geo_result, np.ndarray)
+    assert geo_result.shape == (len(get_gm_contours()) * 2, 2)
+    assert non_geo_result.shape == (len(get_gm_contours()) * 2, 2)
 
 
