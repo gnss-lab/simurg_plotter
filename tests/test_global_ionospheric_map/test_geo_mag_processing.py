@@ -17,7 +17,7 @@ def arrays():
     else:
         pytest.fail(f"Failed to download file from {url}. Status code: {response.status_code}")
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="package")
 def contours():
     url = "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=maps.npy"
     response = requests.get(url)
