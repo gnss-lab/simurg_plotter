@@ -12,7 +12,7 @@ MODULE_PATH = os.path.dirname(__file__)
 TEST_IMAGE_PATH = os.path.join(MODULE_PATH, "test_images")
 BASE_URL = "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files="
 IMAGE_NAMES = [f"GIM_dat_{i}.png" for i in range(12)]
-IMAGE_NAMES2 = [f"GIM{i}.png" for i in range(12)]
+IMAGE_NAMES2 = [f"GIM_{i}.png" for i in range(12)]
 IMAGE_URLS = [BASE_URL + image_name for image_name in IMAGE_NAMES]
 IMAGE_URLS2 = [BASE_URL + image_name for image_name in IMAGE_NAMES2]
 
@@ -20,14 +20,14 @@ IMAGE_URLS2 = [BASE_URL + image_name for image_name in IMAGE_NAMES2]
 @pytest.fixture(scope="function")
 def get_maps(request):
     return download_and_load_pickle(
-        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=arrs.pkl"
+        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=test1.pkl"
     )
 
 
 @pytest.fixture(scope="function")
 def get_maps2(request):
     return download_and_load_pickle(
-        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=arrs4.pkl"
+        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=test2.pkl"
     )
 
 
