@@ -1,6 +1,7 @@
 import numpy as np
 from dataclasses import dataclass
 
+
 @dataclass
 class Series:
     """
@@ -23,6 +24,7 @@ class Series:
     :param sat_name: Name of the satellite.
     :type sat_name: str
     """
+
     site_lat: float
     site_lon: float
     sip_lon: np.ndarray
@@ -55,7 +57,7 @@ class Series:
         self.elevation = serie_list[5]
         self.azimuth = serie_list[6]
         self.sat_name = serie_list[7]
-    
+
     def __str__(self):
         """
         Returns a string representation of the Series object.
@@ -63,12 +65,14 @@ class Series:
         :return: String representation of the Series object.
         :rtype: str
         """
-        return f"Series Object:\n" \
-               f"Site Latitude: {self.site_lat}\n" \
-               f"Site Longitude: {self.site_lon}\n" \
-               f"SIP Longitude: {self.sip_lon}\n" \
-               f"SIP Latitude: {self.sip_lat}\n" \
-               f"SIP Larc: {self.sip_larc}\n" \
-               f"Elevation: {self.elevation}\n" \
-               f"Azimuth: {self.azimuth}\n" \
-               f"Satellite Name: {self.sat_name}"
+        return (
+            f"Series Object:\n"
+            f"Site Latitude: {self.site_lat}\n"
+            f"Site Longitude: {self.site_lon}\n"
+            f"SIP Longitude: {self.sip_lon}\n"
+            f"SIP Latitude: {self.sip_lat}\n"
+            f"SIP Larc: {self.sip_larc}\n"
+            f"Elevation: {self.elevation}\n"
+            f"Azimuth: {self.azimuth}\n"
+            f"Satellite Name: {self.sat_name}"
+        )
