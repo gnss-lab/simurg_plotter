@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 from . import Series
 import numpy as np
 import matplotlib.pyplot as plt
