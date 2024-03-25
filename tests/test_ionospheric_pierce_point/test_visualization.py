@@ -10,6 +10,7 @@ from simurg_plotter.ionospheric_pierce_point.visualization import (
     mercator_plot,
     polar_plot,
 )
+from simurg_plotter.ionospheric_pierce_point import Series
 
 MODULE_PATH = os.path.dirname(__file__)
 TEST_IMAGE_PATH = os.path.join(MODULE_PATH, "test_images")
@@ -19,7 +20,7 @@ BASE_URL = "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=
 @pytest.fixture(scope="function")
 def get_series(request):
     return download_and_load_pickle(
-        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=test_series.pkl"
+        "https://cloud.iszf.irk.ru/index.php/s/tCLs3QNiQb8VGDz/download?path=%2F&files=series2.pkl"
     )
 
 
@@ -52,16 +53,19 @@ def download_image(image_url, prefix, destination_path):
 def test_mercator_plot(request, get_series):
     for deg, cutoff in zip([0, 10, 30], ["no", "10deg", "30deg"]):
         url = BASE_URL + f"ipp_mercator_{cutoff}_cutoff.png"
+        series = [Series(serie) for serie in get_series]
         downloaded_image_path = download_image(
             url, f"test_mercator_{cutoff}", TEST_IMAGE_PATH
         )
-        filename = TEST_IMAGE_PATH + f"ipp_mercator_{cutoff}_cutoff.png"
+        filename = TEST_IMAGE_PATH + f"/ipp_mercator_{cutoff}_cutoff.png"
         if cutoff == "no":
-            mercator_plot(get_series, filename=filename)
+            mercator_plot(series, filename=filename)
         else:
-            mercator_plot(get_series, filename=filename, elevation_cutoff=deg)
+            mercator_plot(series, filename=filename, elevation_cutoff=deg)
         result = plt.imread(filename)
         downloaded_image = plt.imread(downloaded_image_path)
+        os.remove(filename)
+        os.remove(downloaded_image_path)
         assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.98
@@ -71,16 +75,19 @@ def test_mercator_plot(request, get_series):
 def test_polar_plot(request, get_series):
     for deg, cutoff in zip([0, 10, 30], ["no", "10deg", "30deg"]):
         url = BASE_URL + f"ipp_polar_{cutoff}_cutoff.png"
+        series = [Series(serie) for serie in get_series]
         downloaded_image_path = download_image(
             url, f"test_polar_{cutoff}", TEST_IMAGE_PATH
         )
-        filename = TEST_IMAGE_PATH + f"ipp_polar_{cutoff}_cutoff.png"
+        filename = TEST_IMAGE_PATH + f"/ipp_polar_{cutoff}_cutoff.png"
         if cutoff == "no":
-            polar_plot(get_series, filename=filename)
+            polar_plot(series, filename=filename)
         else:
-            polar_plot(get_series, filename=filename, elevation_cutoff=deg)
+            polar_plot(series, filename=filename, elevation_cutoff=deg)
         result = plt.imread(filename)
         downloaded_image = plt.imread(downloaded_image_path)
+        os.remove(filename)
+        os.remove(downloaded_image_path)
         assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.98
