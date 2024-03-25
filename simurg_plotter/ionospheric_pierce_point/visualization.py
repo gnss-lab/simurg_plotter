@@ -1,4 +1,5 @@
 from typing import List, Optional, Union
+from . import Series
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -11,7 +12,7 @@ matplotlib.rc("font", **font)
 
 
 def mercator_plot(
-    series: List,
+    series: List[Series],
     filename: Optional[str] = None,
     elevation_cutoff: float = 0,
     width: int = 1600,
@@ -38,15 +39,13 @@ def mercator_plot(
     lines = []
     ser = series[0]
     ax.plot(
-        np.rad2deg(ser.site.lon), np.rad2deg(ser.site.lat), "s", label="Site"
+        ser.site_lon, ser.site_lat, "s", label="Site"
     )
     for ser in series:
-        if "sip_lon" not in ser.fields or "sip_lat" not in ser.fields:
-            ser.calc_pierce_point()
-        inds = np.where(ser["elevation"] > np.deg2rad(elevation_cutoff))
+        inds = np.where(ser.elevation > np.deg2rad(elevation_cutoff))
         lines.append(None)
         (lines[-1],) = ax.plot(
-            ser["sip_lon"][inds], ser["sip_lat"][inds], "o", label=ser.sat.name
+            ser.sip_lon[inds], ser.sip_lat[inds], "o", label=ser.sat_name
         )
     ax.set_xlabel("Longitude, degrees")
     ax.set_ylabel("Latitude, degrees")
@@ -63,7 +62,7 @@ def mercator_plot(
 
 
 def polar_plot(
-    series: List,
+    series: List[Series],
     filename: Optional[str] = None,
     elevation_cutoff: float = 0,
     radius: int = 1600,
@@ -90,13 +89,11 @@ def polar_plot(
     ax.set_theta_direction(-1)
     ax.set_theta_offset(np.pi / 2.0)
     for ser in series:
-        if "sip_larc" not in ser.fields:
-            ser.calc_pierce_larc()
-        inds = np.where(ser["elevation"] > np.deg2rad(elevation_cutoff))
-        azimuth = ser["azimuth"][inds]
-        r = ser["sip_larc"][inds]
+        inds = np.where(ser.elevation > np.deg2rad(elevation_cutoff))
+        azimuth = ser.azimuth[inds]
+        r = ser.sip_larc[inds]
         lines.append(None)
-        (lines[-1],) = ax.plot(azimuth, r, "o", label=ser.sat.name)
+        (lines[-1],) = ax.plot(azimuth, r, "o", label=ser.sat_name)
     ax.set_xlabel("Azimuth, degrees")
     fig.suptitle("Sounding geometry (azimuth vs great_circle_distance)")
     ax.minorticks_on()
