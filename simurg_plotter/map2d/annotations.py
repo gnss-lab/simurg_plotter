@@ -7,6 +7,7 @@ from matplotlib.path import Path
 import pickle
 import os
 
+from .subsolar import SubSolar
 def get_lats_and_parallels():
     path = os.path.join(
         os.path.dirname(__file__), "files/lats_and_parallels.pkl"
@@ -34,7 +35,7 @@ def get_parallels_patch(lat_limit=20):
                              transform=ccrs.Geodetic())
 
 
-def plot_terminator(ax, lat, lon, color="black", alpha=0.5):
+def plot_terminator(ax, time=None, color="black", alpha=0.5):
     """
     Plot a fill on the dark side of the planet (without refraction).
 
@@ -45,8 +46,8 @@ def plot_terminator(ax, lat, lon, color="black", alpha=0.5):
         time : datetime
             The time to calculate terminator for. Defaults to datetime.utcnow()
     """
-    # ss = SubSolar()
-    # lat, lon = ss.get_latlon(time)
+    ss = SubSolar()
+    lat, lon = ss.get_latlon(time)
     pole_lng = lon
     if lat > 0:
         pole_lat = -90 + lat

@@ -8,21 +8,46 @@ import numpy as np
  
 from .annotations import get_parallels_patch
 from .annotations import plot_gridlines, plot_terminator, plot_geo_borders
-from simurg_core import PRODUCT_TYPES
+# from simurg_core import PRODUCT_TYPES
 
-from . import font, WATER_MARK, DTYPE, PLOT_PROP
+# from . import font, WATER_MARK, DTYPE, PLOT_PROP
 
 """
 Created on Thu Jul 20 12:36:56 2017
 
 @author: Artem Vesnin
 """
+font = {'family': 'sans-serif',
+        "sans-serif": "DejaVu Sans",
+        'size': 14}
 
 matplotlib.rc('font', **font)
+
+
+
+WATER_MARK = "Created by SIMuRG"
+
+PLOT_PROP = {"alpha": 1,
+             "vmax": None,
+             "vmin": None}
+
+DTYPE = [('lat', 'float'), ('lon', 'float'), ('vals', 'float')]
 
 PLOT_PROP.update({"s": None,
                   "cmap": "jet",  # "jet" \ "bwr"
                   "marker": "s"})
+
+PRODUCT_TYPES = {"dtec_2_10": 
+                     {"name": "2-10 minute TEC variations", "unit": "TECu"},
+                 "dtec_10_20": 
+                     {"name": "10-20 minute TEC variations", "unit": "TECu"},
+                 "dtec_20_60": 
+                     {"name": "20-60 minute TEC variations", "unit": "TECu"},
+                 "roti": 
+                     {"name": "ROTI", "unit": "TECu/min"},
+                 "tec_adjusted": 
+                     {"name": "Adjusted TEC", "unit": "TECu"}
+                 }
 
 LAYOUT_PROP = {"fig_size": (10, 5),
                "projection": ccrs.PlateCarree(),
@@ -47,12 +72,13 @@ REF_TEXT = {"var_type": "",
 
 class Map2D(object):
 
-    def __init__(self, dims, width=1280, height=720, dpi=150):
+    def __init__(self, dims):
         self.data = None
         self.dims = (dims[0], dims[1])  # lat, lon
         self.steps = self._check_dims()
         self.grid_data = None
-        self.fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
+        # self.fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
+        # self.plot_ax = plot_ax
         self.cbar = None
         self.prop = LAYOUT_PROP.copy()
         self.plot_prop = None
@@ -135,24 +161,24 @@ class Map2D(object):
         if self.prop["show_on_screen"]:
 
             def resize_colobar(event):
-                self.fig.canvas.draw_idle()
+                self.plot_ax.figure.canvas.draw_idle()
                 posn = self.plot_ax.get_position()
                 self.cbar_ax.set_position([posn.x0 + posn.width + 0.04,
                                            posn.y0,
                                            0.04,
                                            posn.height])
 
-            self.fig.canvas.mpl_connect('resize_event', resize_colobar)
-            self.fig.canvas.mpl_connect('draw_event', resize_colobar)
+            self.plot_ax.figure.canvas.mpl_connect('resize_event', resize_colobar)
+            self.plot_ax.figure.canvas.mpl_connect('draw_event', resize_colobar)
 
     def _make_text(self, time):
         time_label = time.strftime("%Y-%m-%dT%H:%M:%SZ (DOY %j)")
         title = time_label + "\n" + self.ref_text["var_type"]
         if self.ref_text["title"].strip() != "":
             title = self.ref_text["title"] + "\n" + title
-        self.fig.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
+        self.plot_ax.figure.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
         self.plot_ax.set_title(title)
-        self.fig.text(0.5, 0.12, WATER_MARK,
+        self.plot_ax.figure.text(0.5, 0.12, WATER_MARK,
                       fontsize=12, color='gray',
                       ha='center', va='bottom', alpha=0.3)
 
@@ -200,8 +226,8 @@ class Map2D(object):
         """
         dims = self.dims
         steps = self.steps
-        grid_data = np.full((dims[0] * dims[1]), np.nan, dtype=np.float)
-        count = np.zeros((dims[0] * dims[1]), dtype=np.float)
+        grid_data = np.full((dims[0] * dims[1]), np.nan, dtype=np.float64)
+        count = np.zeros((dims[0] * dims[1]), dtype=np.float64)
         for i in range(len(self.data["lat"])):
             lat = self.data["lat"][i]
             lon = self.data["lon"][i]
@@ -231,7 +257,7 @@ class Map2D(object):
                 result = result[np.logical_not(np.isnan(result['vals']))]
         return result
 
-    def prepare_layout(self, **kwargs):
+    def prepare_layout(self, plot_ax, **kwargs):
         """
         Sets global setting and makes layout
 
@@ -240,10 +266,11 @@ class Map2D(object):
         """
         if self.closed:
             raise RuntimeError('Figure is closed create new instance of Map2D')
-        self.fig.clf()
         self.cbar = None
         self._update_layout_props(**kwargs)
-        self.plot_ax = self.fig.add_subplot(111, projection=ccrs.PlateCarree())
+        # self.plot_ax = fig.add_subplot(0, projection=ccrs.PlateCarree())
+        self.plot_ax = plot_ax
+        # self.plot_ax.clear()
         self.plot_ax.set_aspect(self.prop["aspect"])
         plot_gridlines(self.plot_ax)
         plot_geo_borders(self.plot_ax)
@@ -251,6 +278,7 @@ class Map2D(object):
         self._update_magnetic_equator()
         self.plot_prop = None
         self._first_plot = True
+        # return plot_ax
 
     def plot(self, data, **kwargs):
         """
@@ -296,7 +324,7 @@ class Map2D(object):
                                    zorder=2,
                                    **self.plot_prop)
         if self.cbar is None:
-            self.cbar = self.fig.colorbar(sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
+            self.cbar = self.plot_ax.figure.colorbar(sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
         self._make_text(kwargs["time"])
         # TODO redraw cbar if property are changed
         self._make_plot(kwargs["save_fig"])
@@ -307,9 +335,9 @@ class Map2D(object):
     def _make_plot(self, fig_path=None):
         if fig_path is not None:
             matplotlib.use('Agg')
-            self.fig.savefig(fig_path, bbox_inches='tight', transparent=False)
+            self.plot_ax.figure.savefig(fig_path, bbox_inches='tight', transparent=False)
         else:
-            plt.show(self.fig)
+            plt.show(block=True)
 
     def plot_scatter(self, data, **kwargs):
         repeats = 1 if self._first_plot else 1
@@ -323,11 +351,11 @@ class Map2D(object):
         self._first_plot = False
 
     def close(self):
-        plt.close(self.fig)
+        plt.close(self.plot_ax.figure)
         self.closed = True
 
 
-def plot_map(data, **kwargs):
+def plot_map(data, _plot_ax, **kwargs):
     """
     Plots data as a function of latitude and longitude.
     :param data: dict of numpy arrays
@@ -336,6 +364,6 @@ def plot_map(data, **kwargs):
     props = LAYOUT_PROP.copy()
     props.update(kwargs)
     dtec = Map2D((181, 360))
-    dtec.prepare_layout(**props)
+    dtec.prepare_layout( _plot_ax, **props)
     dtec._first_plot = False
     dtec.plot_scatter(data, **kwargs)
