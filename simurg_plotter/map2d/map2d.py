@@ -8,6 +8,7 @@ import numpy as np
  
 from .annotations import get_parallels_patch
 from .annotations import plot_gridlines, plot_terminator, plot_geo_borders
+from typing import Tuple, Dict, Any
 # from simurg_core import PRODUCT_TYPES
 
 # from . import font, WATER_MARK, DTYPE, PLOT_PROP
@@ -17,62 +18,66 @@ Created on Thu Jul 20 12:36:56 2017
 
 @author: Artem Vesnin
 """
-font = {'family': 'sans-serif',
-        "sans-serif": "DejaVu Sans",
-        'size': 14}
+
+font: dict = {'family': 'sans-serif',
+              "sans-serif": "DejaVu Sans",
+              'size': 14}
 
 matplotlib.rc('font', **font)
 
+WATER_MARK: str = "Created by SIMuRG"
 
-
-WATER_MARK = "Created by SIMuRG"
-
-PLOT_PROP = {"alpha": 1,
-             "vmax": None,
-             "vmin": None}
+PLOT_PROP: dict = {"alpha": 1,
+                   "vmax": None,
+                   "vmin": None}
 
 DTYPE = [('lat', 'float'), ('lon', 'float'), ('vals', 'float')]
 
 PLOT_PROP.update({"s": None,
-                  "cmap": "jet",  # "jet" \ "bwr"
+                  "cmap": "jet",
                   "marker": "s"})
 
-PRODUCT_TYPES = {"dtec_2_10": 
-                     {"name": "2-10 minute TEC variations", "unit": "TECu"},
-                 "dtec_10_20": 
-                     {"name": "10-20 minute TEC variations", "unit": "TECu"},
-                 "dtec_20_60": 
-                     {"name": "20-60 minute TEC variations", "unit": "TECu"},
-                 "roti": 
-                     {"name": "ROTI", "unit": "TECu/min"},
-                 "tec_adjusted": 
-                     {"name": "Adjusted TEC", "unit": "TECu"}
-                 }
+PRODUCT_TYPES: dict = {"dtec_2_10":
+                           {"name": "2-10 minute TEC variations", "unit": "TECu"},
+                       "dtec_10_20":
+                           {"name": "10-20 minute TEC variations", "unit": "TECu"},
+                       "dtec_20_60":
+                           {"name": "20-60 minute TEC variations", "unit": "TECu"},
+                       "roti":
+                           {"name": "ROTI", "unit": "TECu/min"},
+                       "tec_adjusted":
+                           {"name": "Adjusted TEC", "unit": "TECu"}
+                       }
 
-LAYOUT_PROP = {"fig_size": (10, 5),
-               "projection": ccrs.PlateCarree(),
-               "transform": ccrs.PlateCarree(),
-               "polar": False,
-               "xmarg": 0.,
-               "ymarg": 0.,
-               "mageq": False,
-               "subsolar": False,
-               "min_lat": -90,
-               "max_lat": 90,
-               "min_lon": -180,
-               "max_lon": 180,
-               "show_on_screen": False,
-               "aspect": "auto",
-               "grid": "subionospheric points"}  # "regular" \ "subionospheric points"
+LAYOUT_PROP: dict = {"fig_size": (10, 5),
+                      "projection": ccrs.PlateCarree(),
+                      "transform": ccrs.PlateCarree(),
+                      "polar": False,
+                      "xmarg": 0.,
+                      "ymarg": 0.,
+                      "mageq": False,
+                      "subsolar": False,
+                      "min_lat": -90,
+                      "max_lat": 90,
+                      "min_lon": -180,
+                      "max_lon": 180,
+                      "show_on_screen": False,
+                      "aspect": "auto",
+                      "grid": "subionospheric points"}
 
-REF_TEXT = {"var_type": "",
-            "title": "",
-            "vlabel": ""}
-
+REF_TEXT: dict = {"var_type": "",
+                  "title": "",
+                  "vlabel": ""}
 
 class Map2D(object):
+    """
+    Class for plotting 2D maps of data.
+    
+    :param dims: Dimensions of the map in terms of latitude and longitude (lat, lon)
+    :type dims: tuple
+    """
 
-    def __init__(self, dims):
+    def __init__(self, dims: Tuple[int, int]):
         self.data = None
         self.dims = (dims[0], dims[1])  # lat, lon
         self.steps = self._check_dims()
@@ -86,7 +91,7 @@ class Map2D(object):
         self._first_plot = True
         self.closed = False
 
-    def _check_dims(self):
+    def _check_dims(self) -> Tuple[int, int]:
         if self.dims[0] % 2 != 1:
             raise ValueError("Latitude dimension must be odd")
         if self.dims[1] % 2 != 0:
@@ -143,46 +148,52 @@ class Map2D(object):
             scale = min(lat_range, lon_range)
             self.plot_prop["s"] = 1 if int(scale) < 1 else int(scale)
 
-    def _update_magnetic_equator(self):
+    def _update_magnetic_equator(self, ax):
         if self.prop["mageq"] is True:
-            self.plot_ax.add_patch(get_parallels_patch())
+            ax.add_patch(get_parallels_patch())
 
-    def _update_terminator(self, map_time):
+    def _update_terminator(self, ax, map_time):
         if self.prop["subsolar"]:
-            return plot_terminator(self.plot_ax, time=map_time)
+            return plot_terminator(ax, time=map_time)
 
-    def _update_margins_limits(self):
-        self.plot_ax.set_xmargin(self.prop["xmarg"])
-        self.plot_ax.set_ymargin(self.prop["ymarg"])
-        self.plot_ax.set_xlim([self.prop["min_lon"], self.prop["max_lon"]])
-        self.plot_ax.set_ylim([self.prop["min_lat"], self.prop["max_lat"]])
+    def _update_margins_limits(self, ax):
+        ax.set_xmargin(self.prop["xmarg"])
+        ax.set_ymargin(self.prop["ymarg"])
+        ax.set_xlim([self.prop["min_lon"], self.prop["max_lon"]])
+        ax.set_ylim([self.prop["min_lat"], self.prop["max_lat"]])
 
-    def _make_updatable_cbar(self):
+    def _make_updatable_cbar(self,ax):
         if self.prop["show_on_screen"]:
 
             def resize_colobar(event):
-                self.plot_ax.figure.canvas.draw_idle()
-                posn = self.plot_ax.get_position()
+                ax.figure.canvas.draw_idle()
+                posn = ax.get_position()
                 self.cbar_ax.set_position([posn.x0 + posn.width + 0.04,
                                            posn.y0,
                                            0.04,
                                            posn.height])
 
-            self.plot_ax.figure.canvas.mpl_connect('resize_event', resize_colobar)
-            self.plot_ax.figure.canvas.mpl_connect('draw_event', resize_colobar)
+            ax.figure.canvas.mpl_connect('resize_event', resize_colobar)
+            ax.figure.canvas.mpl_connect('draw_event', resize_colobar)
 
-    def _make_text(self, time):
+    def _make_text(self, ax, time):
         time_label = time.strftime("%Y-%m-%dT%H:%M:%SZ (DOY %j)")
         title = time_label + "\n" + self.ref_text["var_type"]
         if self.ref_text["title"].strip() != "":
             title = self.ref_text["title"] + "\n" + title
-        self.plot_ax.figure.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
-        self.plot_ax.set_title(title)
-        self.plot_ax.figure.text(0.5, 0.12, WATER_MARK,
+        ax.figure.suptitle(WATER_MARK, fontsize=8, x=0.85, alpha=0.3)
+        ax.set_title(title)
+        ax.figure.text(0.5, 0.12, WATER_MARK,
                       fontsize=12, color='gray',
                       ha='center', va='bottom', alpha=0.3)
 
-    def _update_data(self, data):
+    def _update_data(self, data: np.ndarray) -> None:
+        """
+        Update the map data.
+
+        :param data: Structured array of data values
+        :type data: numpy.ndarray
+        """
         self.data = data
         self.grid_data = None
 
@@ -257,49 +268,40 @@ class Map2D(object):
                 result = result[np.logical_not(np.isnan(result['vals']))]
         return result
 
-    def prepare_layout(self, plot_ax, **kwargs):
+    def prepare_layout(self, plot_ax: plt.Axes, **kwargs: Any) -> None:
         """
-        Sets global setting and makes layout
+        Sets global settings and creates layout for the map.
 
-        Parameters:
-            See LAYOUT_PROP.
+        :param plot_ax: Axis object for plotting
+        :type plot_ax: matplotlib.axes.Axes
+        :param **kwargs: Additional keyword arguments for layout properties
         """
         if self.closed:
             raise RuntimeError('Figure is closed create new instance of Map2D')
+        plot_ax.clear()
         self.cbar = None
         self._update_layout_props(**kwargs)
         # self.plot_ax = fig.add_subplot(0, projection=ccrs.PlateCarree())
-        self.plot_ax = plot_ax
+        # self.plot_ax = plot_ax
         # self.plot_ax.clear()
-        self.plot_ax.set_aspect(self.prop["aspect"])
-        plot_gridlines(self.plot_ax)
-        plot_geo_borders(self.plot_ax)
-        self._update_margins_limits()
-        self._update_magnetic_equator()
+        plot_ax.set_aspect(self.prop["aspect"])
+        plot_gridlines(plot_ax)
+        plot_geo_borders(plot_ax)
+        self._update_margins_limits(plot_ax)
+        self._update_magnetic_equator(plot_ax)
         self.plot_prop = None
         self._first_plot = True
         # return plot_ax
 
-    def plot(self, data, **kwargs):
+    def plot(self, ax: plt.Axes, data: np.ndarray, **kwargs: Any) -> None:
         """
-        Plots data on corresponding latitude and longitude coordinates
+        Plots data on the map.
 
-        Parameters:
-            data : structured array of values to plot
-            product_type : string
-            one of the key of simurg_core.PRODUCT_TYPES
-
-            mpl : dict, optional.
-            matplotlib plot parameters, see PLOT_PROP
-
-            save_fig : str, optional.
-            Name of the file to save in. If save_fig is None plot will be shown
-            on the screen. Default None
-
-            time : datetime
-            Target (reference) time of the map.
-            text: dict of strings
-            See REF_TEXT
+        :param ax: Axis object for plotting
+        :type ax: matplotlib.axes.Axes
+        :param data: Structured array of values to plot
+        :type data: numpy.ndarray
+        :param **kwargs: Additional keyword arguments
         """
         if self.closed:
             raise RuntimeError('Figure is closed create new instance of Map2D')
@@ -317,53 +319,82 @@ class Map2D(object):
             # are used. Use prepare_layout to drop curent
             # ones""".format(kwargs["mpl"], self.plot_prop))
 
-        terminator = self._update_terminator(kwargs["time"])
+        self.terminator = self._update_terminator(ax, kwargs["time"])
+        # print(terminator)
 
-        sct = self.plot_ax.scatter(data['lon'], data['lat'], c=data['vals'],
+        # ax.scatter(data['lon'], data['lat'], c=data['vals'],
+        #                            transform=self.prop["transform"],
+        #                            zorder=2,
+        #                            **self.plot_prop)
+        self.sct = ax.scatter(data['lon'], data['lat'], c=data['vals'],
                                    transform=self.prop["transform"],
                                    zorder=2,
                                    **self.plot_prop)
         if self.cbar is None:
-            self.cbar = self.plot_ax.figure.colorbar(sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
-        self._make_text(kwargs["time"])
+            self.cbar = ax.figure.colorbar(self.sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
+        self._make_text(ax, kwargs["time"])
         # TODO redraw cbar if property are changed
-        self._make_plot(kwargs["save_fig"])
-        sct.remove()
-        if terminator:
-            terminator.remove()
+        # self._make_plot(ax, kwargs["save_fig"])
+        
+        new_ax = self._make_plot(ax, kwargs["save_fig"])
+        return new_ax
 
-    def _make_plot(self, fig_path=None):
+    def _make_plot(self, ax,fig_path=None):
         if fig_path is not None:
             matplotlib.use('Agg')
-            self.plot_ax.figure.savefig(fig_path, bbox_inches='tight', transparent=False)
+            ax.figure.savefig(fig_path, bbox_inches='tight', transparent=False)
         else:
-            plt.show(block=True)
+            return ax
 
-    def plot_scatter(self, data, **kwargs):
+    def plot_scatter(self, ax: plt.Axes, data: np.ndarray, **kwargs: Any) -> None:
+        """
+        Plots scatter data on the map.
+
+        :param ax: Axis object for plotting
+        :type ax: matplotlib.axes.Axes
+        :param data: Structured array of scatter data
+        :type data: numpy.ndarray
+        :param **kwargs: Additional keyword arguments
+        """
         repeats = 1 if self._first_plot else 1
         for _ in range(repeats):
             self._update_data(data)
             if self.prop["grid"] == "subionospheric points":
-                self.plot(self.data, **kwargs)
+                return self.plot(ax, self.data, **kwargs)
             elif self.prop["grid"] == "regular":
                 self._regular_grid()
-                self.plot(self.grid_data, **kwargs)
+                return self.plot(ax, self.grid_data, **kwargs)
         self._first_plot = False
 
-    def close(self):
-        plt.close(self.plot_ax.figure)
+    def clear(self):
+        """Clears the map."""
+        self.sct.remove()
+        if self.terminator:
+            self.terminator.remove()
+
+    def close(self, ax):
+        """
+        Closes the map.
+
+        :param ax: Axis object for plotting
+        :type ax: matplotlib.axes.Axes
+        """
+        plt.close(ax.figure)
         self.closed = True
 
 
-def plot_map(data, _plot_ax, **kwargs):
+def plot_map(_plot_ax: plt.Axes, data: Dict[str, np.ndarray],  **kwargs: Any) -> None:
     """
     Plots data as a function of latitude and longitude.
-    :param data: dict of numpy arrays
-        dtype of arrays is of format fed to Map2D (see map2d.DTYPE)
+
+    :param _plot_ax: Axis object for plotting
+    :type _plot_ax: matplotlib.axes.Axes
+    :param data: Dictionary of numpy arrays
+    :type data: dict
     """
     props = LAYOUT_PROP.copy()
     props.update(kwargs)
     dtec = Map2D((181, 360))
     dtec.prepare_layout( _plot_ax, **props)
     dtec._first_plot = False
-    dtec.plot_scatter(data, **kwargs)
+    dtec.plot_scatter(_plot_ax, data, **kwargs)
