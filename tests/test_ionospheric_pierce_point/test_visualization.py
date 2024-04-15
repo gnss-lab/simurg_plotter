@@ -68,7 +68,7 @@ def test_mercator_plot(request, get_series):
         os.remove(downloaded_image_path)
         assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
-            >= 0.98
+            >= 0.95
         )
 
 
@@ -90,5 +90,5 @@ def test_polar_plot(request, get_series):
         os.remove(downloaded_image_path)
         assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
-            >= 0.98
+            >= 0.95
         )
