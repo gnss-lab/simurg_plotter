@@ -18,6 +18,7 @@ def mercator_plot(
     width: int = 1600,
     height: int = 1200,
     dpi: int = 100,
+    ax: Optional[plt.Axes] = None
 ) -> None:
     """
     Plot sounding geometry using Mercator projection.
@@ -35,12 +36,16 @@ def mercator_plot(
     :param dpi: Dots per inch of the figure, defaults to 100
     :type dpi: int, optional
     """
-    fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+    else:
+        fig = ax.figure
     lines = []
     ser = series[0]
-    ax.plot(
-        ser.site_lon, ser.site_lat, "s", label="Site"
-    )
+    if ser.site_lat is not None and ser.site_lon is not None:
+        ax.plot(
+            ser.site_lon, ser.site_lat, "s", label="Site"
+        )
     for ser in series:
         inds = np.where(ser.elevation > np.deg2rad(elevation_cutoff))
         lines.append(None)
@@ -49,7 +54,7 @@ def mercator_plot(
         )
     ax.set_xlabel("Longitude, degrees")
     ax.set_ylabel("Latitude, degrees")
-    fig.suptitle("Sounding geometry (Latitude vs Longitude)")
+    ax.set_title("Sounding geometry (Latitude vs Longitude)")
     ax.minorticks_on()
     ax.xaxis.grid(which="minor", alpha=0.2)
     ax.xaxis.grid(which="major", alpha=0.5)
@@ -67,6 +72,7 @@ def polar_plot(
     elevation_cutoff: float = 0,
     radius: int = 1600,
     dpi: int = 100,
+    ax: Optional[plt.Axes] = None
 ) -> None:
     """
     Plot sounding geometry using polar projection.
@@ -82,8 +88,12 @@ def polar_plot(
     :param dpi: Dots per inch of the figure, defaults to 100
     :type dpi: int, optional
     """
-    fig = plt.figure(figsize=(radius / dpi + 1, radius / dpi), dpi=dpi)
-    ax = fig.add_subplot(111, projection="polar")
+    if ax is None:
+        fig = plt.figure(figsize=(radius / dpi + 1, radius / dpi), dpi=dpi)
+        ax = fig.add_subplot(111, projection="polar")
+    else:
+        fig = ax.figure
+    
     lines = []
     p = ax.plot(0, 0, "s", label="Site")
     ax.set_theta_direction(-1)
@@ -95,7 +105,7 @@ def polar_plot(
         lines.append(None)
         (lines[-1],) = ax.plot(azimuth, r, "o", label=ser.sat_name)
     ax.set_xlabel("Azimuth, degrees")
-    fig.suptitle("Sounding geometry (azimuth vs great_circle_distance)")
+    ax.set_title("Sounding geometry (azimuth vs great_circle_distance)")
     ax.minorticks_on()
     ax.xaxis.grid(which="minor", alpha=0.2)
     ax.xaxis.grid(which="major", alpha=0.5)
