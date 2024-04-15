@@ -80,7 +80,7 @@ def test_scatter_region(get_map2d_data):
     dtec.prepare_layout(plot_ax, min_lat=0, max_lat=80,
                         min_lon=-180, max_lon=-40, aspect = 'equal')
 
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_north_america.png", time=time,
+    dtec.plot_scatter(plot_ax, plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_north_america.png", time=time,
                     product_type="dtec_2_10", mpl=mpl_kwargs)
     fig.clf()
     # us
@@ -88,7 +88,7 @@ def test_scatter_region(get_map2d_data):
     dtec.prepare_layout(plot_ax, min_lat=30, max_lat=50,
                         min_lon=-140, max_lon=-40, aspect = 'equal')
 
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_us.png", time=time,
+    dtec.plot_scatter(plot_ax,plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_us.png", time=time,
                     text = TEXT, mpl=mpl_kwargs)
     fig.clf()
     #europe
@@ -96,7 +96,7 @@ def test_scatter_region(get_map2d_data):
     dtec.prepare_layout(plot_ax, min_lat=20, max_lat=70,
                         min_lon=-30, max_lon=60, aspect = 'equal')
 
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_europe.png", time=time,
+    dtec.plot_scatter(plot_ax,plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_europe.png", time=time,
                     text = TEXT, mpl=mpl_kwargs)
     fig.clf()
     #japan
@@ -104,26 +104,32 @@ def test_scatter_region(get_map2d_data):
     dtec.prepare_layout(plot_ax, min_lat=20, max_lat=60,
                         min_lon=125, max_lon=150, aspect = 'equal')
 
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_japan.png", time=time,
+    dtec.plot_scatter(plot_ax,plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_japan.png", time=time,
                     text = TEXT, mpl=mpl_kwargs)
     #with vlimits
     dtec.update_text(title="Bla Bla Title")
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_region_with_vlimits.png", 
+    dtec.plot_scatter(plot_ax, plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_region_with_vlimits.png", 
                   time=time,
                   mpl={'vmin': -0.5, 'vmax': 0.5})
     fig.clf()
     for test, downloaded in zip(test_images_paths, downloaded_images_paths):
         result = plt.imread(test)
         downloaded_image = plt.imread(downloaded)
+        os.remove(test)
+        os.remove(downloaded)
         assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.95
         )
-    result = plt.imread(TEST_IMAGE_PATH+"/scatter_region_with_vlimits.png")
+    test = TEST_IMAGE_PATH+"/scatter_region_with_vlimits.png"
+    result = plt.imread(test)
     url = BASE_URL+f"scatter_region_with_vlimits.png"
+    downloaded = TEST_IMAGE_PATH+"/test_scatter_region_with_vlimits.png"
     downloaded_image = plt.imread(download_image(
             url, f"test_scatter_region_with_vlimits", TEST_IMAGE_PATH
         ))
+    os.remove(test)
+    os.remove(downloaded)
     assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.95
@@ -134,21 +140,29 @@ def test_scatter_entire_maqeq(get_map2d_data_dtec):
     plot_data = get_map2d_data_dtec
     dtec.update_text(**TEXT)
     dtec.prepare_layout(plot_ax, color_lbl="dTEC", mageq=True)
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_entire_mageq.png",
+    dtec.plot_scatter(plot_ax,plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_entire_mageq.png",
                         time=time, mpl=None)
-    dtec.plot_scatter(plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_entire_mageq2.png",
+    dtec.plot_scatter(plot_ax,plot_data, save_fig=TEST_IMAGE_PATH+"/scatter_entire_mageq2.png",
                         time=time, mpl=None)
     fig.clf()
-    result1 = plt.imread(TEST_IMAGE_PATH+"/scatter_entire_mageq.png")
-    result2 = plt.imread(TEST_IMAGE_PATH+"/scatter_entire_mageq2.png")
+    test1=TEST_IMAGE_PATH+"/scatter_entire_mageq.png"
+    test2=TEST_IMAGE_PATH+"/scatter_entire_mageq2.png"
+    result1 = plt.imread(test1)
+    result2 = plt.imread(test2)
     url1 = BASE_URL+f"scatter_entire_mageq.png"
     url2 = BASE_URL+f"scatter_entire_mageq2.png"
+    downloaded1 = TEST_IMAGE_PATH+"/test_scatter_entire_mageq.png"
+    downloaded2 = TEST_IMAGE_PATH+"/test_scatter_entire_mageq2.png"
     downloaded_image1 = plt.imread(download_image(
             url1, f"test_scatter_entire_mageq", TEST_IMAGE_PATH
         ))
     downloaded_image2 = plt.imread(download_image(
             url2, f"test_scatter_entire_mageq2", TEST_IMAGE_PATH
         ))
+    os.remove(test1)
+    os.remove(test2)
+    os.remove(downloaded1)
+    os.remove(downloaded2)
     assert (
             np.corrcoef(result1.flatten(), downloaded_image1.flatten())[0, 1]
             >= 0.95
@@ -163,15 +177,19 @@ def test_marker_changed(get_map2d_data_dtec):
     plot_data = get_map2d_data_dtec
     mpl_kwargs = {"marker": "s", "s": 10, "alpha": 1, "cmap": "jet"}
     dtec.prepare_layout(plot_ax, color_lbl="dTEC")
-    dtec.plot_scatter(plot_data, mpl=mpl_kwargs,
+    dtec.plot_scatter(plot_ax,plot_data, mpl=mpl_kwargs,
                   save_fig=TEST_IMAGE_PATH+"/marker_changed.png",
                   time=time)
     fig.clf()
-    result = plt.imread(TEST_IMAGE_PATH+"/marker_changed.png")
+    test = TEST_IMAGE_PATH+"/marker_changed.png"
+    result = plt.imread(test)
     url = BASE_URL+f"marker_changed.png"
+    downloaded = TEST_IMAGE_PATH+"/test_marker_changed.png"
     downloaded_image = plt.imread(download_image(
             url, f"test_marker_changed", TEST_IMAGE_PATH
         ))
+    os.remove(test)
+    os.remove(downloaded)
     assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.95
@@ -182,15 +200,19 @@ def test_grided_entire(get_map2d_data_dtec):
     plot_data = get_map2d_data_dtec
     dtec.prepare_layout(plot_ax, polar=False, subsolar=True,
                     projection=ccrs.PlateCarree(), color_lbl="dTEC", grid="regular")
-    dtec.plot_scatter(plot_data, time=time,
+    dtec.plot_scatter(plot_ax,plot_data, time=time,
                save_fig=TEST_IMAGE_PATH+"/grided_entire.png",
                mpl=None)
     fig.clf()
-    result = plt.imread(TEST_IMAGE_PATH+"/grided_entire.png")
+    test = TEST_IMAGE_PATH+"/grided_entire.png"
+    result = plt.imread(test)
     url = BASE_URL+f"grided_entire.png"
+    downloaded = TEST_IMAGE_PATH+"/test_grided_entire.png"
     downloaded_image = plt.imread(download_image(
             url, f"test_grided_entire", TEST_IMAGE_PATH
         ))
+    os.remove(test)
+    os.remove(downloaded)
     assert (
             np.corrcoef(result.flatten(), downloaded_image.flatten())[0, 1]
             >= 0.95
