@@ -18,12 +18,15 @@ def plot(
     gims: List[np.ndarray],
     fig_path: Optional[List[str]] = [],
     geo: bool = True,
+     ax: Optional[plt.Axes] = None,
     **kwargs: Optional[dict],
 ):
     """Plot Geo-Magnetic maps.
 
     :param gims: List of maps to plot
     :type gims: List[np.ndarray]
+    :param ax: Matplotlib Axes object on which to plot, defaults to None
+    :type ax: Optional[plt.Axes], optional
     :param fig_path: List of paths to save figures, defaults to []
     :type fig_path: Optional[List[str]], optional
     :param geo: Indicates whether the maps are in geo format, defaults to True
@@ -42,7 +45,7 @@ def plot(
     :type **kwargs: Optional[dict]
     """
     if len(fig_path) != 0 and len(gims) != len(fig_path):
-        msg = f"Path to figures must be provide for each of {len(gims)} maps"
+        msg = f"Path to figures must be provided for each of {len(gims)} maps"
         raise ValueError(msg)
     width = kwargs.get("width", 3000)
     height = kwargs.get("width", 1500)
@@ -53,8 +56,13 @@ def plot(
     mag_geo_net = get_uniform_mag_net()
     lims = gims_limits(gims)
     for igim, arr in enumerate(gims):
-        fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
-        plot_ax = fig.add_subplot(111)
+        if ax is None:
+            fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
+            plot_ax = fig.add_subplot(111)
+        else:
+            fig = ax.figure
+            plot_ax = ax
+            ax.clear()
         plot_ax.plot(lonlat[:, 0], lonlat[:, 1], color="black", alpha=0.5)
         im = None
         if WITH_MAP == -1:
@@ -72,6 +80,8 @@ def plot(
                 pass
             else:
                 fig.suptitle(kwargs["titles"][igim])
+        if "title" in kwargs:
+            plot_ax.set_title(kwargs["title"])
         else:
             plot_ax.axis("off")
         fig.tight_layout()
@@ -85,15 +95,20 @@ def plot(
         plot_ax.set_xticklabels(xl)
         if im:
             im.set_clim(vmin=lims[0], vmax=lims[1])
+        # cbar = plt.colorbar(plot_ax, label="TEC, TECu", fraction=0.07, pad=0.035)
+        # cbar.set_clim()
         fig.colorbar(im, label="TEC, TECu", fraction=0.07, pad=0.035)
         if "cmin" in kwargs and "cmax" in kwargs:
             plot_ax.set_clim(kwargs["cmin"], kwargs["cmax"])
         if "vmin" in kwargs and "vmax" in kwargs:
             plot_ax.set_clim(vmin=kwargs["vmin"], vmax=kwargs["vmax"])
         if len(fig_path) != len(gims):
-            mng = plt.get_current_fig_manager()
-            mng.full_screen_toggle()
-            plt.show()
+            pass
+            # mng = plt.get_current_fig_manager()
+            # mng.full_screen_toggle()
+            # plt.show()
         else:
             fig.savefig(fig_path[igim])
             plt.close(fig)
+
+
