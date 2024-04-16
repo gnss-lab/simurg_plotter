@@ -12,6 +12,7 @@ python = "^3.10"
 cartopy = "^0.22.0"
 pandas = "^2.0.3"
 h5py = "^3.9.0"
+requests = "^2.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"
