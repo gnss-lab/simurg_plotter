@@ -83,7 +83,8 @@ def plot(
         if "title" in kwargs:
             plot_ax.set_title(kwargs["title"])
         else:
-            plot_ax.axis("off")
+            # plot_ax.axis("off")
+            pass
         fig.tight_layout()
         yt = [0] + list(range(5, 70, 6)) + [70]
         yl = [87.5] + list(range(75, -76, -15)) + [-87.5]
@@ -108,6 +109,7 @@ def plot(
             # mng.full_screen_toggle()
             # plt.show()
         else:
+            matplotlib.use('agg')
             fig.savefig(fig_path[igim])
             plt.close(fig)
 

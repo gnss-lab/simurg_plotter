@@ -113,5 +113,6 @@ def polar_plot(
     if filename is None:
         plt.show()
     else:
+        matplotlib.use('agg')
         fig.savefig(filename)
         plt.close(fig)

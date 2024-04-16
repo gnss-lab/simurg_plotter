@@ -20,6 +20,7 @@ LON_DEGREES_HOUR = 15.
 class SubSolar(object):
 
     def get_latlon(self, time):
+        time = time.astimezone(dt.timezone.utc)
         delta = time - dt.datetime(time.year, 1, 1, 0, 0, 0).replace(tzinfo=dt.timezone.utc)
         doy = delta.days
         ut_hour = time.hour + time.minute / 60. + time.second / (60. * 24.)
