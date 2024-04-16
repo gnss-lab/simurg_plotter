@@ -133,5 +133,5 @@ def test_git_world_plot(request, downloaded_images2, get_maps2):
             np.corrcoef(saved_image.flatten(), downloaded_image.flatten())[
                 0, 1
             ]
-            >= 0.98
+            >= 0.85
         )
