@@ -8,11 +8,11 @@ import matplotlib
 from cartopy.mpl.geoaxes import GeoAxes
 import cartopy.crs as ccrs
 from mpl_toolkits.axes_grid1 import AxesGrid
-from global_ionospheric_map.visualization import plot as gim_plot
-from ionospheric_pierce_point import Series
-from ionospheric_pierce_point.visualization import mercator_plot, polar_plot
-from map2d.map2d import plot_map
-from disturbance_storm_time.dst import plot_dst
+from .global_ionospheric_map.visualization import plot as gim_plot
+from .ionospheric_pierce_point import Series
+from .ionospheric_pierce_point.visualization import mercator_plot, polar_plot
+from .map2d.map2d import plot_map
+from .disturbance_storm_time.dst import plot_dst
 from enum import Enum
 import imageio.v2 as imageio
 from time import sleep
