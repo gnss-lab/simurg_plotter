@@ -224,7 +224,7 @@ class PlotManager:
         path = fig_path if fig_path is not None else ""     
         with imageio.get_writer(path+'/animation.gif', mode='I', fps=fps, loop=True) as writer:
             for i in range(len(times)):
-                filename = f"files/frame_{i}.png"
+                filename = f"tmp/frame_{i}.png"
                 image = imageio.imread(filename)
                 writer.append_data(image)
                 os.remove(filename)
