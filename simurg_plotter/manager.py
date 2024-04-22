@@ -222,9 +222,9 @@ class PlotManager:
                 new_plot_data[plot_type]=([data, kwargs])
             self.draw_plots(new_plot_data, fig_path=f"frame_{i}.png")
 
-        with imageio.get_writer('animation.gif', mode='I', fps=fps, loop=True) as writer:
+        with imageio.get_writer('files/animation.gif', mode='I', fps=fps, loop=True) as writer:
             for i in range(len(times)):
-                filename = f"frame_{i}.png"
+                filename = f"files/frame_{i}.png"
                 image = imageio.imread(filename)
                 writer.append_data(image)
                 os.remove(filename)
