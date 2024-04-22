@@ -201,7 +201,7 @@ class PlotManager:
 
         
 
-    def animate_plots(self, plot_data, times, fps=24):
+    def animate_plots(self, plot_data, times, fig_path=None, fps=24):
         """
         Generate an animation from the provided plot data.
 
@@ -221,8 +221,8 @@ class PlotManager:
                     # print(data)
                 new_plot_data[plot_type]=([data, kwargs])
             self.draw_plots(new_plot_data, fig_path=f"frame_{i}.png")
-
-        with imageio.get_writer('files/animation.gif', mode='I', fps=fps, loop=True) as writer:
+        path = fig_path if fig_path is not None else ""     
+        with imageio.get_writer(path+'/animation.gif', mode='I', fps=fps, loop=True) as writer:
             for i in range(len(times)):
                 filename = f"files/frame_{i}.png"
                 image = imageio.imread(filename)
