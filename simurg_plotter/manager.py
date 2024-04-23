@@ -223,7 +223,7 @@ class PlotManager:
                     # print(data)
                 new_plot_data[plot_type]=([data, kwargs])
             self.draw_plots(new_plot_data, fig_path=f"{tempfile.gettempdir()}/frame_{i}.png")
-        path = fig_path if fig_path is not None else ""     
+        path = fig_path if fig_path is not None else "/"     
         with imageio.get_writer(tempfile.gettempdir()+'/animation.gif', mode='I', fps=fps) as writer:
             for i in range(len(times)):
                 filename = f"{tempfile.gettempdir()}/frame_{i}.png"
