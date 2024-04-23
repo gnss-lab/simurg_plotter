@@ -232,7 +232,7 @@ class PlotManager:
                 os.remove(filename)
         with Image.open(tempfile.gettempdir()+'/animation.gif') as im:
             im.info['loop'] = 0
-            im.save(path+file_name, 'GIF', save_all=True, dither="None") 
+            im.save(f"{path}{file_name}", 'GIF', save_all=True, dither="None") 
 
 
 
