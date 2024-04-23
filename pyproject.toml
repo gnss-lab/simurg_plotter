@@ -2,7 +2,10 @@
 name = "simurg-plotter"
 version = "0.1.0"
 description = "Tools for plotting geophysical data"
-authors = ["Artem Vesnin <artemvesnin@gmail.com>"]
+authors = [
+    "Artem Vesnin <artemvesnin@gmail.com>",
+    "Nikita Bagulov <nikita.bagulov.arshan@gmail.com>"
+]
 license = "MIT"
 readme = "README.rst"
 packages = [{include = "simurg_plotter"}]
