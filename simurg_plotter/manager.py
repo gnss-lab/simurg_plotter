@@ -16,6 +16,7 @@ from .disturbance_storm_time.dst import plot_dst
 from enum import Enum
 import imageio.v2 as imageio
 from time import sleep
+import tempfile
 import os
 
 
@@ -220,11 +221,11 @@ class PlotManager:
                     data = data[time] if plot_type == Plots.MAP2D or plot_type == Plots.GIM else data
                     # print(data)
                 new_plot_data[plot_type]=([data, kwargs])
-            self.draw_plots(new_plot_data, fig_path=f"tmp/frame_{i}.png")
+            self.draw_plots(new_plot_data, fig_path=f"{tempfile.gettempdir()}/frame_{i}.png")
         path = fig_path if fig_path is not None else ""     
         with imageio.get_writer(path+'/animation.gif', mode='I', fps=fps, loop=True) as writer:
             for i in range(len(times)):
-                filename = f"tmp/frame_{i}.png"
+                filename = f"{tempfile.gettempdir()}/frame_{i}.png"
                 image = imageio.imread(filename)
                 writer.append_data(image)
                 os.remove(filename)
