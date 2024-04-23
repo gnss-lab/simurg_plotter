@@ -6,6 +6,7 @@ import matplotlib
 # matplotlib.use('agg')
 
 from cartopy.mpl.geoaxes import GeoAxes
+from PIL import Image, GifImagePlugin
 import cartopy.crs as ccrs
 from mpl_toolkits.axes_grid1 import AxesGrid
 from .global_ionospheric_map.visualization import plot as gim_plot
@@ -202,7 +203,7 @@ class PlotManager:
 
         
 
-    def animate_plots(self, plot_data, times, fig_path=None, fps=24):
+    def animate_plots(self, plot_data, times, file_name="animation.gif", fig_path=None, fps=24):
         """
         Generate an animation from the provided plot data.
 
@@ -223,12 +224,15 @@ class PlotManager:
                 new_plot_data[plot_type]=([data, kwargs])
             self.draw_plots(new_plot_data, fig_path=f"{tempfile.gettempdir()}/frame_{i}.png")
         path = fig_path if fig_path is not None else ""     
-        with imageio.get_writer(path+'/animation.gif', mode='I', fps=fps) as writer:
+        with imageio.get_writer(tempfile.gettempdir()+'/animation.gif', mode='I', fps=fps) as writer:
             for i in range(len(times)):
                 filename = f"{tempfile.gettempdir()}/frame_{i}.png"
                 image = imageio.imread(filename)
                 writer.append_data(image)
                 os.remove(filename)
+        with Image.open(tempfile.gettempdir()+'/animation.gif') as im:
+            im.info['loop'] = 0
+            im.save(path+file_name, 'GIF', save_all=True, dither="None") 
 
 
 
