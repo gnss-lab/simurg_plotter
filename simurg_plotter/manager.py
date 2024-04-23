@@ -220,7 +220,7 @@ class PlotManager:
                     data = data[time] if plot_type == Plots.MAP2D or plot_type == Plots.GIM else data
                     # print(data)
                 new_plot_data[plot_type]=([data, kwargs])
-            self.draw_plots(new_plot_data, fig_path=f"frame_{i}.png")
+            self.draw_plots(new_plot_data, fig_path=f"tmp/frame_{i}.png")
         path = fig_path if fig_path is not None else ""     
         with imageio.get_writer(path+'/animation.gif', mode='I', fps=fps, loop=True) as writer:
             for i in range(len(times)):
