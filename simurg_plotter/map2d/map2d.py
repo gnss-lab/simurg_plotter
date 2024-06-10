@@ -19,11 +19,11 @@ Created on Thu Jul 20 12:36:56 2017
 @author: Artem Vesnin
 """
 
-font: dict = {'family': 'sans-serif',
-              "sans-serif": "DejaVu Sans",
-              'size': 14}
+# font: dict = {'family': 'sans-serif',
+#               "sans-serif": "DejaVu Sans",
+#               'size': 14}
 
-matplotlib.rc('font', **font)
+# matplotlib.rc('font', **font)
 
 WATER_MARK: str = "Created by SIMuRG"
 
@@ -49,7 +49,7 @@ PRODUCT_TYPES: dict = {"dtec_2_10":
                            {"name": "Adjusted TEC", "unit": "TECu"}
                        }
 
-LAYOUT_PROP: dict = {"fig_size": (10, 5),
+LAYOUT_PROP: dict = {"fig_size": (18, 9),
                       "projection": ccrs.PlateCarree(),
                       "transform": ccrs.PlateCarree(),
                       "polar": False,
