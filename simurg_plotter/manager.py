@@ -16,7 +16,7 @@ from .disturbance_storm_time.dst import plot_dst
 
 DEFAULT_PARAMS = {
     'font.size': 20,
-    # 'figure.dpi': 300,
+    'figure.dpi': 300,
     'font.family': 'serif',
     'font.style': 'normal',
     'font.weight': 'light',
@@ -45,16 +45,16 @@ class Plots(Enum):
     DST = 'dst'
 
 class PlotManager:
-    def __init__(self, nrows=3, ncols=3, figsize=(18, 9), width=1920, height=1080, dpi=200):
+    def __init__(self, nrows=3, ncols=3, height=18, dpi=300):
         self.nrows = nrows
         self.ncols = ncols
-        self.fig = plt.figure(figsize=figsize)
+        self.figsize = (18, height)
+        self.fig = plt.figure(figsize=self.figsize, dpi=dpi)
         self.gs = GridSpec(nrows, ncols, figure=self.fig)
         self.gs.update(wspace=0.5, hspace=0.45)
         self.axes = {}
-        self.width = width
-        self.height = height
-        self.dpi = dpi
+        # self.width = width
+        # self.height = height
 
     def add_subplot(self, row, col, rowspan=1, colspan=1, projection=None, title=None):
         ax = plt.subplot(self.gs[row:row+rowspan, col:col+colspan], projection=projection)
@@ -111,20 +111,6 @@ class PlotManager:
         ax = self.add_subplot(row, col, projection='polar', title=title, colspan=colspan)
         polar_plot(data, ax=ax, **kwargs)
         return ax, None
-
-    def create_plot(self, plot_type, row, col, data, **kwargs):
-        if plot_type == Plots.MAP2D:
-            return self.plot_map2d(row, col, data, **kwargs)
-        elif plot_type == Plots.DST:
-            return self.plot_dst(row, col, data, **kwargs)
-        elif plot_type == Plots.GIM:
-            return self.plot_gim(row, col, data, **kwargs)
-        elif plot_type == Plots.IPP_POLAR:
-            return self.plot_ipp_pol(row, col, data, **kwargs)
-        elif plot_type == Plots.IPP_MERCATOR:
-            return self.plot_ipp_merc(row, col, data, **kwargs)
-        else:
-            raise ValueError("Unsupported plot type")
 
     def animate_plots(self, plot_data, times, file_name="animation.gif", fig_path=None, fps=24):
         for i, time in enumerate(times):
