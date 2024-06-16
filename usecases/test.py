@@ -73,6 +73,7 @@ with open('files/uqrg0010.17i') as file:
         gd[ionex_map.epoch.replace(tzinfo=ionex_map.epoch.tzinfo or _UTC)] = [np.reshape(ionex_map.tec, (71, 73))]
 
 time = datetime.datetime(2017, 1, 1, 0, 0, 0).replace(tzinfo=datetime.datetime(2017, 1, 1, 0, 0, 0).tzinfo or _UTC)
+time2 = datetime.datetime(2017, 1, 1, 5, 0, 0).replace(tzinfo=datetime.datetime(2017, 1, 1, 0, 0, 0).tzinfo or _UTC)
 # plotter = PlotManager(nrows=1, ncols=1)
 # plotter.plot_gim(0, 0, gd[time], title=f'IRI(2017) {time.strftime("%Y-%m-%d %H:%M:%S")}', time=time)
 # plotter.save("gim_plot.png")
@@ -90,16 +91,15 @@ ipp_data = extract_series_data("files/dtec_2_10_2021_308_7140.h5")
 
 plotter = PlotManager(nrows=3, ncols=2, height=12)
 plotter.plot_map2d(0, 0, data[times[0]], title="Map2D", product_type="dtec_2_10", time=times[0], save_fig=None, polar=False, subsolar=True, min_lat=50, max_lat=55, min_lon=100, max_lon=110)
-plotter.plot_map2d(0, 1, data[times[0]], title="Map2D", product_type="dtec_2_10", time=times[0], save_fig=None, polar=False, subsolar=True, min_lat=-90, max_lat=90, min_lon=-180, max_lon=180)
+plotter.plot_map2d(0, 1, data[times[0]], title="Map2D", colorbar=True, product_type="dtec_2_10", time=times[0], save_fig=None, polar=False, subsolar=True, min_lat=50, max_lat=55, min_lon=100, max_lon=110)
 start_date = datetime.datetime(2024, 4, 1)
 time_interval = datetime.timedelta(hours=1)
 timestamps = [start_date + i * time_interval for i in range(24*30)]
 dst_values = np.random.uniform(low=-100, high=100, size=len(timestamps))
 dst_data = np.column_stack((timestamps, dst_values))
-gim_ax1, gim_mappable1 = plotter.plot_gim(1, 0, gd[time], title=f'IRI(2017) {time.strftime("%Y-%m-%d %H:%M:%S")}', time=time)
-plotter.add_colorbar(gim_mappable1, ax=gim_ax1)
-gim_ax, gim_mappable = plotter.plot_gim(1, 1, gd[time], title=f'IRI(2017) {time.strftime("%Y-%m-%d %H:%M:%S")}', time=time)
-plotter.add_colorbar(gim_mappable, ax=gim_ax)
+plotter.plot_gim(1, 0, gd[time], title=f'IRI(2017) {time.strftime("%Y-%m-%d %H:%M:%S")}', colorbar=True, time=time)
+plotter.plot_gim(1, 1, gd[time2], title=f'IRI(2017) {time2.strftime("%Y-%m-%d %H:%M:%S")}', colorbar=True, time=time2)
+
 
 plotter.plot_dst(2, 0, dst_data, time=times[10], colspan=2)
 plotter.save("combined_plot.png")
