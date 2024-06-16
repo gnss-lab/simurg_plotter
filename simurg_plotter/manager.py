@@ -53,6 +53,7 @@ class PlotManager:
         self.gs = GridSpec(nrows, ncols, figure=self.fig)
         self.gs.update(wspace=0.5, hspace=0.45)
         self.axes = {}
+        self.data_for_color_scale = []
         # self.width = width
         # self.height = height
 
@@ -67,7 +68,7 @@ class PlotManager:
         handles = [plt.Line2D([0], [0], color=color, lw=4) for color in colors]
         ax.legend(handles, labels, loc='best')
 
-    def add_colorbar(self, mappable, ax, orientation='vertical', fraction=0.007, pad=0.0035):
+    def __add_colorbar(self, mappable, ax, orientation='vertical', fraction=0.007, pad=0.0035):
         # Create a new axis for the colorbar
         if orientation == 'vertical':
             position = ax.get_position()
@@ -86,10 +87,13 @@ class PlotManager:
         self.fig.tight_layout()
         plt.show()
 
-    def plot_map2d(self, row, col, data, colspan=1, title=None, **kwargs):
+    def plot_map2d(self, row, col, data, colspan=1, title=None, colorbar=False, **kwargs):
         ax = self.add_subplot(row, col, projection=ccrs.PlateCarree(), title=title, colspan=colspan)
-        mappable = plot_map(ax, data, **kwargs)
-        return ax, mappable
+        mappable =plot_map(ax, data, **kwargs)
+        #  ax.collections[0]
+        if colorbar:
+            self.__add_colorbar(mappable, ax)
+        # return ax, ax.collections[0]
 
     def plot_dst(self, row, col, data, colspan=1, title=None, **kwargs):
         ax = self.add_subplot(row, col, title=title, colspan=colspan)
@@ -97,10 +101,12 @@ class PlotManager:
         plot_dst(ax, data, **kwargs)
         return ax, None
 
-    def plot_gim(self, row, col, data, colspan=1, title=None, **kwargs):
+    def plot_gim(self, row, col, data, colspan=1, title=None, colorbar=False, **kwargs):
         ax = self.add_subplot(row, col, projection=ccrs.PlateCarree(), colspan=colspan)
         mappable = gim_plot(data, ax=ax, title=title, **kwargs)
-        return ax, mappable
+        if colorbar:
+            self.__add_colorbar(mappable, ax)
+        # return ax, mappable
 
     def plot_ipp_merc(self, row, col, data, colspan=1, title=None, **kwargs):
         ax = self.add_subplot(row, col, projection=ccrs.Mercator(), title=title, colspan=colspan)
