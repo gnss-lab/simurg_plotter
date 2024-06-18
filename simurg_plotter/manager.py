@@ -45,20 +45,23 @@ class Plots(Enum):
     DST = 'dst'
 
 class PlotManager:
-    def __init__(self, nrows=3, ncols=3, height=18, dpi=300):
+    def __init__(self, nrows=3, ncols=3, height_ratios=[1, 1, 0.25], height=18, dpi=300, margin=0.1):
         self.nrows = nrows
         self.ncols = ncols
         self.figsize = (18, height)
+        self.margin = margin
         self.fig = plt.figure(figsize=self.figsize, dpi=dpi)
-        self.gs = GridSpec(nrows, ncols, figure=self.fig)
-        self.gs.update(wspace=0.5, hspace=0.45)
+        self.gs = GridSpec(nrows, ncols, height_ratios=height_ratios, figure=self.fig)
+        self.gs.update(wspace=0.35, hspace=0.45)
         self.axes = {}
         self.data_for_color_scale = []
+        self.current_colorbar = None
         # self.width = width
         # self.height = height
 
     def add_subplot(self, row, col, rowspan=1, colspan=1, projection=None, title=None):
-        ax = plt.subplot(self.gs[row:row+rowspan, col:col+colspan], projection=projection)
+        # Create a subplot with GridSpec
+        ax = self.fig.add_subplot(self.gs[row:row+rowspan, col:col+colspan], projection=projection)
         self.axes[(row, col)] = ax
         if title:
             ax.set_title(title)
@@ -69,7 +72,7 @@ class PlotManager:
         ax.legend(handles, labels, loc='best')
 
     def __add_colorbar(self, mappable, ax, orientation='vertical', fraction=0.007, pad=0.0035):
-        # Create a new axis for the colorbar
+    # Create a new axis for the colorbar
         if orientation == 'vertical':
             position = ax.get_position()
             cax = self.fig.add_axes([position.x1 + pad, position.y0, fraction, position.height])
@@ -77,23 +80,41 @@ class PlotManager:
             position = ax.get_position()
             cax = self.fig.add_axes([position.x0, position.y0 - pad - fraction, position.width, fraction])
         cbar = self.fig.colorbar(mappable, cax=cax, orientation=orientation)
+        
+        # Update colorbar position after adjusting subplots
+        self.fig.subplots_adjust(left=0.2, right=0.95)  # Example adjustment
+        if orientation == 'vertical':
+            new_position = ax.get_position()
+            cax.set_position([new_position.x1 + pad, new_position.y0, fraction, new_position.height])
+        elif orientation == 'horizontal':
+            new_position = ax.get_position()
+            cax.set_position([new_position.x0, new_position.y0 - pad - fraction, new_position.width, fraction])
+        
         return cbar
 
     def save(self, filename):
-        self.fig.tight_layout()
+        # self.fig.tight_layout()
+        self.fig.subplots_adjust(left=0.2, right=0.95)
+        # self.fig.subplots_adjust(left=self.margin, right=1-self.margin, top=1-self.margin, bottom=self.margin)
+        # self.fig.subplots_adjust(left=self.margin, right=1-self.margin, top=1-self.margin, bottom=self.margin)
         self.fig.savefig(filename, bbox_inches='tight')
+        # self.fig.savefig(filename)
 
     def show(self):
-        self.fig.tight_layout()
+        # self.fig.tight_layout(rect=[self.margin, self.margin, 1-self.margin, 1-self.margin])
         plt.show()
 
     def plot_map2d(self, row, col, data, colspan=1, title=None, colorbar=False, **kwargs):
         ax = self.add_subplot(row, col, projection=ccrs.PlateCarree(), title=title, colspan=colspan)
-        mappable =plot_map(ax, data, **kwargs)
-        #  ax.collections[0]
+        mappable = plot_map(ax, data, **kwargs)
+
         if colorbar:
-            self.__add_colorbar(mappable, ax)
-        # return ax, ax.collections[0]
+            self.current_colorbar = self.__add_colorbar(mappable, ax)
+        if self.current_colorbar:
+                self.current_colorbar.mappable = mappable
+                self.current_colorbar.update_normal(mappable)
+
+        return ax, mappable
 
     def plot_dst(self, row, col, data, colspan=1, title=None, **kwargs):
         ax = self.add_subplot(row, col, title=title, colspan=colspan)

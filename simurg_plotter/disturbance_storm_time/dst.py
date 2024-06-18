@@ -20,7 +20,7 @@ def plot_dst(ax, dst_data, **kwargs):
         # ax.xticks(rotation=45)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(base=6))
         ax.set_xlabel('Date')
-        ax.set_ylabel('Dst Index')
+        # ax.set_ylabel('Dst Index')
 
         if 'time' in kwargs:
                 time = kwargs['time']

@@ -284,7 +284,7 @@ class Map2D(object):
         # self.plot_ax = fig.add_subplot(0, projection=ccrs.PlateCarree())
         # self.plot_ax = plot_ax
         # self.plot_ax.clear()
-        plot_ax.set_aspect(self.prop["aspect"])
+        # plot_ax.set_aspect(self.prop["aspect"])
         plot_gridlines(plot_ax)
         plot_geo_borders(plot_ax)
         self._update_margins_limits(plot_ax)
@@ -330,8 +330,8 @@ class Map2D(object):
                                    transform=self.prop["transform"],
                                    zorder=2,
                                    **self.plot_prop)
-        if self.cbar is None:
-            self.cbar = ax.figure.colorbar(self.sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
+        # if self.cbar is None:
+        #     self.cbar = ax.figure.colorbar(self.sct, label=self.ref_text["vlabel"], fraction=0.046, pad=0.04)
         self._make_text(ax, kwargs["time"])
         # TODO redraw cbar if property are changed
         # self._make_plot(ax, kwargs["save_fig"])
@@ -383,7 +383,7 @@ class Map2D(object):
         self.closed = True
 
 
-def plot_map(_plot_ax: plt.Axes, data: Dict[str, np.ndarray],  **kwargs: Any) -> None:
+def plot_map(_plot_ax: plt.Axes, data: Dict[str, np.ndarray],  **kwargs: Any):
     """
     Plots data as a function of latitude and longitude.
 
@@ -398,3 +398,4 @@ def plot_map(_plot_ax: plt.Axes, data: Dict[str, np.ndarray],  **kwargs: Any) ->
     dtec.prepare_layout( _plot_ax, **props)
     dtec._first_plot = False
     dtec.plot_scatter(_plot_ax, data, **kwargs)
+    return dtec.sct
