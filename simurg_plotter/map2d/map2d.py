@@ -335,16 +335,7 @@ class Map2D(object):
         self._make_text(ax, kwargs["time"])
         # TODO redraw cbar if property are changed
         # self._make_plot(ax, kwargs["save_fig"])
-        
-        new_ax = self._make_plot(ax, kwargs["save_fig"])
-        return new_ax
-
-    def _make_plot(self, ax,fig_path=None):
-        if fig_path is not None:
-            matplotlib.use('Agg')
-            ax.figure.savefig(fig_path, bbox_inches='tight', transparent=False)
-        else:
-            return ax
+        return ax
 
     def plot_scatter(self, ax: plt.Axes, data: np.ndarray, **kwargs: Any) -> None:
         """
