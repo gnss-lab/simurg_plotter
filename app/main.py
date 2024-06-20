@@ -25,7 +25,7 @@ class Plot(BaseModel):
     timestamp: str = "2017-01-01T00:00:00"
     rowspan: int = 1
     colspan: int = 1
-    colorbar: bool = False
+    colorbar: bool = True
 
 class PlotRequest(BaseModel):
     height: int = 9
@@ -42,11 +42,23 @@ plot_storage: Dict[str, List[Plot]] = {}
 def read_root():
     return {"message": "Welcome to the random graph generator API"}
 
+@app.post("/upload_file/")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        file_location = os.path.join(data_dir, file.filename)
+        with open(file_location, "wb") as file_object:
+            file_object.write(file.file.read())
+        logging.info(f"File {file.filename} uploaded successfully to {file_location}")
+        return {"status": "success", "filename": file.filename}
+    except Exception as e:
+        logging.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/generate_plot/")
 async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks):
     try:
-        request_id = request.file_name
-        output_file = f"{request.file_name}.png"
+        request_id = str(uuid.uuid4())
+        output_file = f"{request.file_name}_{request_id}.png"
         plot_data = request.dict()
         
         data_files = [plot.data_file for plot in request.plots]
@@ -65,48 +77,49 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/list_plots/")
-def list_plots(request_id: str):
-    try:
-        if request_id not in plot_storage:
-            raise HTTPException(status_code=404, detail="Request ID not found")
+# @app.get("/list_plots/")
+# def list_plots(request_id: str):
+#     try:
+#         if request_id not in plot_storage:
+#             raise HTTPException(status_code=404, detail="Request ID not found")
         
-        return {"request_id": request_id, "plots": [plot.dict() for plot in plot_storage[request_id]]}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#         return {"request_id": request_id, "plots": [plot.dict() for plot in plot_storage[request_id]]}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/list_graphs/")
-def list_graphs():
-    try:
-        files = [f for f in os.listdir(data_dir) if f.endswith('.png')]
-        return {"files": files}
-    except FileNotFoundError:
-        logging.error("Directory not found")
-        raise HTTPException(status_code=404, detail="Directory not found")
-    except Exception as e:
-        logging.error(f"Error listing graphs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/download_graph/")
-def download_graph(filename: str):
-    file_path = f"{data_dir}/{filename}"
-    if os.path.exists(file_path):
-        logging.info(f"Downloading graph: {filename}")
-        return FileResponse(path=file_path, media_type='image/png', filename=filename)
-    else:
-        logging.error(f"File not found: {filename}")
-        raise HTTPException(status_code=404, detail="File not found")
-
+# @app.get("/list_graphs/")
+# def list_graphs():
+#     try:
+#         files = [f for f in os.listdir(data_dir) if f.endswith('.png')]
+#         return {"files": files}
+#     except FileNotFoundError:
+#         logging.error("Directory not found")
+#         raise HTTPException(status_code=404, detail="Directory not found")
+#     except Exception as e:
+#         logging.error(f"Error listing graphs: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/get_request_progress/")
 def get_request_progress(request_id: str):
     progress = get_container_progress(request_id)
     return {"request_id": request_id, "progress": progress}
 
+# @app.get("/download_graph/")
+# def download_graph(filename: str):
+#     file_path = f"{data_dir}/{filename}"
+#     if os.path.exists(file_path):
+#         logging.info(f"Downloading graph: {filename}")
+#         return FileResponse(path=file_path, media_type='image/png', filename=filename)
+#     else:
+#         logging.error(f"File not found: {filename}")
+#         raise HTTPException(status_code=404, detail="File not found")
 
-@app.get("/get_request_logs/")
-def get_request_logs(request_id: str):
-    logs = get_container_logs(request_id)
-    return {"request_id": request_id, "logs": logs}
+
+
+
+# @app.get("/get_request_logs/")
+# def get_request_logs(request_id: str):
+#     logs = get_container_logs(request_id)
+#     return {"request_id": request_id, "logs": logs}
 
 @app.get("/download_result/")
 def download_result(request_id: str, filename: str):

@@ -1,0 +1,11 @@
+# uvicorn
+# fastapi
+# matplotlib
+h5py
+cartopy==0.22.0
+numpy==1.25.2
+matplotlib==3.7.2
+futures
+
+git+https://github.com/gnss-lab/ionex.git#egg=ionex
+git+https://github.com/gnss-lab/simurg_plotter.git@test_new_manager#egg=simurg-plotter&subdirectory=simurg_plotter

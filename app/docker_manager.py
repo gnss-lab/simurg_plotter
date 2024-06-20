@@ -37,7 +37,7 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data, data
         
         logging.info(f"Starting Docker container: {container_name}")
         client.containers.run(
-            "plot-single",
+            "plot_single",
             command=["python", "plot_single.py", str(height), str(dpi), output_file, f"./data/{request_id}_data.json"],
             name=container_name,
             volumes=volume_bindings,
