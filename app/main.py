@@ -4,7 +4,7 @@ import uuid
 from fastapi import FastAPI, Form, HTTPException, BackgroundTasks, File, UploadFile
 import json
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Union
 from fastapi.responses import FileResponse
 from docker_manager import start_docker_container, get_container_progress, get_container_logs, delete_container_and_progress
 
@@ -16,16 +16,36 @@ data_dir = "./data"
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
-class Plot(BaseModel):
+class PlotBase(BaseModel):
     row: int = 0
     col: int = 0
-    plot_type: str = "map2d"
+    plot_type: str
     data_file: str = "./data/dtec_2_10_2017_001_-90_90_N_-180_180_E_3d57.h5"
-    title: str 
+    title: str
     timestamp: str = "2017-01-01T00:00:00"
     rowspan: int = 1
     colspan: int = 1
     colorbar: bool = True
+
+class Map2DPlot(PlotBase):
+    plot_type: str = "map2d"
+    min_lat: float = -90
+    max_lat: float = 90
+    min_lon: float = -180
+    max_lon: float = 180
+
+class GIMPlot(PlotBase):
+    plot_type: str = "gim"
+
+class IPPMercatorPlot(PlotBase):
+    plot_type: str = "ipp_mercator"
+
+class IPPPolarPlot(PlotBase):
+    plot_type: str = "ipp_polar"
+
+class DSTPlot(PlotBase):
+    plot_type: str = "dst"
+    delimiter: str = ','
 
 class PlotRequest(BaseModel):
     height: int = 9
@@ -33,26 +53,11 @@ class PlotRequest(BaseModel):
     file_name: str = "test"
     nrows: int = 1
     ncols: int = 1
-    plots: List[Plot]
-
-# Dictionary to store plots temporarily
-plot_storage: Dict[str, List[Plot]] = {}
+    plots: List[Union[Map2DPlot, GIMPlot, IPPMercatorPlot, IPPPolarPlot, DSTPlot]]
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the random graph generator API"}
-
-@app.post("/upload_file/")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        file_location = os.path.join(data_dir, file.filename)
-        with open(file_location, "wb") as file_object:
-            file_object.write(file.file.read())
-        logging.info(f"File {file.filename} uploaded successfully to {file_location}")
-        return {"status": "success", "filename": file.filename}
-    except Exception as e:
-        logging.error(f"Error uploading file: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/generate_plot/")
 async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks):
@@ -60,8 +65,10 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
         request_id = str(uuid.uuid4())
         output_file = f"{request.file_name}_{request_id}.png"
         plot_data = request.dict()
+        plot_data_path = f"{data_dir}/{request.file_name}_{request_id}_data.json"
         
-        data_files = [plot.data_file for plot in request.plots]
+        with open(plot_data_path, 'w') as f:
+            json.dump(plot_data, f)
         
         background_tasks.add_task(
             start_docker_container,
@@ -69,23 +76,12 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
             dpi=request.dpi,
             output_file=output_file,
             request_id=request_id,
-            plot_data=plot_data,
-            data_files=data_files
+            plot_data_path=plot_data_path
         )
 
         return {"status": "success", "request_id": request_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.get("/list_plots/")
-# def list_plots(request_id: str):
-#     try:
-#         if request_id not in plot_storage:
-#             raise HTTPException(status_code=404, detail="Request ID not found")
-        
-#         return {"request_id": request_id, "plots": [plot.dict() for plot in plot_storage[request_id]]}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
 # @app.get("/list_graphs/")
 # def list_graphs():
@@ -98,10 +94,6 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
 #     except Exception as e:
 #         logging.error(f"Error listing graphs: {e}")
 #         raise HTTPException(status_code=500, detail=str(e))
-@app.get("/get_request_progress/")
-def get_request_progress(request_id: str):
-    progress = get_container_progress(request_id)
-    return {"request_id": request_id, "progress": progress}
 
 # @app.get("/download_graph/")
 # def download_graph(filename: str):
@@ -113,8 +105,10 @@ def get_request_progress(request_id: str):
 #         logging.error(f"File not found: {filename}")
 #         raise HTTPException(status_code=404, detail="File not found")
 
-
-
+@app.get("/get_request_progress/")
+def get_request_progress(request_id: str):
+    progress = get_container_progress(request_id)
+    return {"request_id": request_id, "progress": progress}
 
 # @app.get("/get_request_logs/")
 # def get_request_logs(request_id: str):
@@ -122,56 +116,62 @@ def get_request_progress(request_id: str):
 #     return {"request_id": request_id, "logs": logs}
 
 @app.get("/download_result/")
-def download_result(request_id: str, filename: str):
-    file_path = f"./data/{filename}"
-    if not os.path.exists(file_path):
+def download_result(request_id: str = None, filename: str = None):
+    if request_id:
+        files = [f for f in os.listdir(data_dir) if f.endswith('.png') and request_id in f]
+    elif filename:
+        files = [filename] if os.path.exists(f"{data_dir}/{filename}") else []
+
+    if not files:
         raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = f"{data_dir}/{files[0]}"
     delete_container_and_progress(request_id)
 
-    logging.info(f"Downloading result for request_id={request_id}: {filename}")
-    return FileResponse(path=file_path, filename=filename, media_type='application/octet-stream')
+    logging.info(f"Downloading result for request_id={request_id}: {files[0]}")
+    return FileResponse(path=file_path, filename=files[0], media_type='application/octet-stream')
 
-@app.post("/range_start_date_end_date/")
-async def set_date_range(
-    request_id: str = Form(...),
-    start_date: str = Form(...),
-    end_date: str = Form(...)
-):
-    try:
-        download_data(request_id, start_date, end_date)
-        return {"status": "success", "message": "Download started"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/range_start_date_end_date/")
+# async def set_date_range(
+#     request_id: str = Form(...),
+#     start_date: str = Form(...),
+#     end_date: str = Form(...)
+# ):
+#     try:
+#         download_data(request_id, start_date, end_date)
+#         return {"status": "success", "message": "Download started"}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/check_download/")
-def check_download(request_id: str):
-    try:
-        status = check_data_download(request_id)
-        return {"status": "success", "download_status": status}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.get("/check_download/")
+# def check_download(request_id: str):
+#     try:
+#         status = check_data_download(request_id)
+#         return {"status": "success", "download_status": status}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/download_ok/")
-def download_ok(request_id: str):
-    try:
-        process_data(request_id)
-        return {"status": "success", "message": "Download verified and processing started"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/download_ok/")
+# def download_ok(request_id: str):
+#     try:
+#         process_data(request_id)
+#         return {"status": "success", "message": "Download verified and processing started"}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/check_proc_status/")
-def check_proc_status(request_id: str):
-    try:
-        status = get_container_status(request_id)
-        return {"status": "success", "processing_status": status}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.get("/check_proc_status/")
+# def check_proc_status(request_id: str):
+#     try:
+#         status = get_container_status(request_id)
+#         return {"status": "success", "processing_status": status}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/ok_tokens/")
-def ok_tokens(request_id: str):
-    try:
-        # Dummy function to return tokens, can be replaced with actual logic
-        tokens = {"token1": "value1", "token2": "value2"}
-        return {"status": "success", "tokens": tokens}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.get("/ok_tokens/")
+# def ok_tokens(request_id: str):
+#     try:
+#         # Dummy function to return tokens, can be replaced with actual logic
+#         tokens = {"token1": "value1", "token2": "value2"}
+#         return {"status": "success", "tokens": tokens}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))

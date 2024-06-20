@@ -11,22 +11,15 @@ data_dir = "./data"
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
-def start_docker_container(height, dpi, output_file, request_id, plot_data, data_files):
+def start_docker_container(height, dpi, output_file, request_id, plot_data_path):
     container_name = f"graph_generator_{request_id}"
     try:
-        # logging.info(plot_data)
-        plot_data_str = json.dumps(plot_data)
-        plot_data_path = f"{data_dir}/{request_id}_data.json"
-        logging.info(plot_data_path)
-        
-        with open(plot_data_path, 'w') as f:
-            f.write(plot_data_str)
-        
         data_dir_request = f"{data_dir}/{request_id}_data"
         os.makedirs(data_dir_request, exist_ok=True)
-        
-        for file in data_files:
-            shutil.copy(file, data_dir_request)
+
+        logging.info(plot_data_path)
+
+
         
         volume_bindings = {
     os.path.abspath(os.path.dirname(__file__) + '/data'): {
@@ -37,8 +30,8 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data, data
         
         logging.info(f"Starting Docker container: {container_name}")
         client.containers.run(
-            "plot_single",
-            command=["python", "plot_single.py", str(height), str(dpi), output_file, f"./data/{request_id}_data.json"],
+            "plot-single",
+            command=["python", "plot_single.py", str(height), str(dpi), output_file, plot_data_path, request_id],
             name=container_name,
             volumes=volume_bindings,
             remove=False,

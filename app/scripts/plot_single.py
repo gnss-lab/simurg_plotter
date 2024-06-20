@@ -60,11 +60,11 @@ def update_progress(request_id, progress):
         json.dump({"progress": progress}, f)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 5:
-        print("Usage: python plot_single.py <height> <dpi> <output_file> <plot_data_path>")
+    if len(sys.argv) != 6:
+        print("Usage: python plot_single.py <height> <dpi> <output_file> <plot_data_path> <request_id>")
         sys.exit(1)
     
-    height, dpi, output_file, plot_data_path = sys.argv[1:5]
+    height, dpi, output_file, plot_data_path, request_id = sys.argv[1:6]
     
     with open(plot_data_path, 'r') as f:
         plot_request = json.load(f)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     
     plot_manager = PlotManager(nrows=nrows, ncols=ncols, height=int(height), dpi=int(dpi), height_ratios=height_ratios)  # Передаем height_ratios в PlotManager
 
-    total_plots = len(plots)
+    total_plots = len(plots)+1
     for i, plot in enumerate(plots):
         plot_type = Plots(plot['plot_type'])
         row = plot['row']
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         
         if plot_type == Plots.MAP2D:
             data = retrieve_data(data_file, times=[timestamp])[timestamp]
-            plot_manager.plot_map2d(row, col, data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp, product_type="dtec_2_10", polar=False, subsolar=True, min_lat=50, max_lat=55, min_lon=100, max_lon=110, colorbar=plot.get('colorbar', False))
+            plot_manager.plot_map2d(row, col, data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp, product_type="dtec_2_10", polar=False, subsolar=True, min_lat=plot.get('min_lat', None), max_lat=plot.get('max_lat', None), min_lon=plot.get('min_lon', None), max_lon=plot.get('max_lon', None), colorbar=plot.get('colorbar', False))
         elif plot_type == Plots.GIM:
             gim_data = load_gim_data(data_file)
             plot_manager.plot_gim(row, col, gim_data[timestamp], title=title, colspan=colspan, rowspan=rowspan, time=timestamp, colorbar=plot.get('colorbar', False))
@@ -100,12 +100,11 @@ if __name__ == "__main__":
             ipp_data = extract_series_data(data_file)
             plot_manager.plot_ipp_pol(row, col, ipp_data, title=title, colspan=colspan, rowspan=rowspan)
         elif plot_type == Plots.DST:
-            dst_data = np.loadtxt(data_file, delimiter=',', dtype='datetime64, float')
+            dst_data = np.loadtxt(data_file, delimiter=plot.get('delimiter', ','))
             plot_manager.plot_dst(row, col, dst_data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp)
-        
-        # Update progress after each plot
+
         progress = (i + 1) / total_plots * 100
-        update_progress(plot_request['file_name'], progress)
+        update_progress(request_id, progress)
 
     plot_manager.save(f"./data/{output_file}")
-    update_progress(plot_request['file_name'], 100)  # Завершение на 100%
+    update_progress(request_id, 100)  # Завершение на 100%
