@@ -5,7 +5,10 @@ git clone --branch test_new_manager https://github.com/gnss-lab/simurg_plotter.g
 
 cd /app
 
-pip install fastapi uvicorn 
+conda create -n app python=3.10
+conda activate app
+
+pip install docker fastapi uvicorn pydantic aiohttp
 
 docker build -t plot-single .
 
