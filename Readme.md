@@ -1,7 +1,7 @@
 # Установка
 
 ```
-git clone https://github.com/gnss-lab/simurg_plotter.git@test_new_manager
+git clone --branch test_new_manager https://github.com/gnss-lab/simurg_plotter.git
 
 cd /app
 
