@@ -86,10 +86,11 @@ if __name__ == "__main__":
         data_file = plot['data_file']
         title = plot.get('title', '')
         timestamp = parse_timestamp(plot.get('timestamp'))
+        product_type = plot.get('product_type')
         
         if plot_type == Plots.MAP2D:
             data = retrieve_data(data_file, times=[timestamp])[timestamp]
-            plot_manager.plot_map2d(row, col, data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp, product_type="dtec_2_10", polar=False, subsolar=True, min_lat=plot.get('min_lat', None), max_lat=plot.get('max_lat', None), min_lon=plot.get('min_lon', None), max_lon=plot.get('max_lon', None), colorbar=plot.get('colorbar', False))
+            plot_manager.plot_map2d(row, col, data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp, product_type=product_type, polar=False, subsolar=True, min_lat=plot.get('min_lat', None), max_lat=plot.get('max_lat', None), min_lon=plot.get('min_lon', None), max_lon=plot.get('max_lon', None), colorbar=plot.get('colorbar', False))
         elif plot_type == Plots.GIM:
             gim_data = load_gim_data(data_file)
             plot_manager.plot_gim(row, col, gim_data[timestamp], title=title, colspan=colspan, rowspan=rowspan, time=timestamp, colorbar=plot.get('colorbar', False))
@@ -107,4 +108,4 @@ if __name__ == "__main__":
         update_progress(request_id, progress)
 
     plot_manager.save(f"./data/{output_file}")
-    update_progress(request_id, 100)  # Завершение на 100%
+    update_progress(request_id, 100)

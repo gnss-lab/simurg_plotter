@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional, Union
 from fastapi.responses import FileResponse
 from docker_manager import start_docker_container, get_container_progress, get_container_logs, delete_container_and_progress
+import requests
+import aiohttp
+import asyncio
 
 app = FastAPI()
 
@@ -29,6 +32,7 @@ class PlotBase(BaseModel):
 
 class Map2DPlot(PlotBase):
     plot_type: str = "map2d"
+    product_type: str = "dtec_2_10"
     min_lat: float = -90
     max_lat: float = 90
     min_lon: float = -180
@@ -55,9 +59,91 @@ class PlotRequest(BaseModel):
     ncols: int = 1
     plots: List[Union[Map2DPlot, GIMPlot, IPPMercatorPlot, IPPPolarPlot, DSTPlot]]
 
+class CheckRequest(BaseModel):
+    email: str
+    url: str
+
+def checking_by_mail(mail: str):
+    """ 
+    Checking all accessible information about queries made by <mail>
+    input - <mail> string type email address to check
+    output - list of dictionaries with all information about every query
+    """ 
+    rq = requests.post("https://simurg.iszf.irk.ru/api", 
+                        json={"method": "check", 
+                              "args": {"email": mail}
+                              }
+                        )
+    return rq.json()
+
+async def download_file(url, save_path, progress_file):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            total = int(response.headers.get('content-length', 0))
+            downloaded = 0
+            with open(save_path, 'wb') as f:
+                async for chunk in response.content.iter_chunked(8192):
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    percent = int(downloaded / total * 100)
+                    with open(progress_file, 'w') as pfile:
+                        pfile.write(f'{percent}')
+                    await asyncio.sleep(0)
+
+            with open(progress_file, 'w') as pfile:
+                pfile.write('100')
+            os.remove(progress_file)
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the random graph generator API"}
+
+@app.post("/download_data_file/")
+async def download_data_file(request: CheckRequest, background_tasks: BackgroundTasks):
+    email = request.email
+    url = request.url
+    try:
+        id_from_url = url.split('id=')[1]
+    except IndexError:
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+    queries = checking_by_mail(email)
+
+    matching_query = next((query for query in queries if query['id'] == id_from_url), None)
+
+    if not matching_query:
+        raise HTTPException(status_code=404, detail="Query with the specified ID not found")
+
+    file_path = matching_query['paths'].get('data')
+
+    if not file_path:
+        raise HTTPException(status_code=404, detail="Data file not found in the query results")
+    download_url = f"https://simurg.space/ufiles/{file_path}"
+    save_directory = 'data'
+    os.makedirs(save_directory, exist_ok=True)
+    save_path = os.path.join(save_directory, os.path.basename(file_path))
+    progress_file = os.path.join(save_directory, f'{id_from_url}.progress')
+    background_tasks.add_task(download_file, download_url, save_path, progress_file)
+
+    return {"message": "Download started", "file_name": os.path.basename(save_path)}
+
+
+@app.get("/download_progress/")
+async def get_progress(url: str):
+    try:
+        id_from_url = url.split('id=')[1]
+    except IndexError:
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+    
+    progress_file_path = os.path.join('data', f'{id_from_url}.progress')
+    if os.path.exists(progress_file_path):
+        with open(progress_file_path, 'r') as pfile:
+            progress = pfile.read()
+        if progress == '100':
+            os.remove(progress_file_path)
+        return {"progress": progress}
+    else:
+        return {"progress": "100"}
 
 @app.post("/generate_plot/")
 async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks):
