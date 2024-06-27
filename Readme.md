@@ -8,7 +8,7 @@ cd /app
 conda create -n app python=3.10
 conda activate app
 
-pip install docker fastapi uvicorn pydantic aiohttp
+pip install docker fastapi uvicorn pydantic aiohttp imageio Pillow
 
 docker build -t plot-single .
 
