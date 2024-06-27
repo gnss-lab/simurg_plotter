@@ -6,7 +6,7 @@ import json
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional, Union
 from fastapi.responses import FileResponse
-from docker_manager import start_docker_container, get_container_progress, get_container_logs, delete_container_and_progress
+from docker_manager import start_docker_container, get_container_progress, delete_container_and_progress, start_docker_container_for_intervals
 import requests
 import aiohttp
 import asyncio
@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO)
 data_dir = "./data"
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
+
 
 class PlotBase(BaseModel):
     row: int = 0
@@ -58,6 +59,12 @@ class PlotRequest(BaseModel):
     nrows: int = 1
     ncols: int = 1
     plots: List[Union[Map2DPlot, GIMPlot, IPPMercatorPlot, IPPPolarPlot, DSTPlot]]
+
+class TimeIntervalRequest(BaseModel):
+    start_time: str
+    end_time: str
+    interval_seconds: int
+    plot_request: PlotRequest
 
 class CheckRequest(BaseModel):
     email: str
@@ -163,6 +170,31 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
             output_file=output_file,
             request_id=request_id,
             plot_data_path=plot_data_path
+        )
+
+        return {"status": "success", "request_id": request_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate_archive_and_animation/")
+async def generate_archive_and_animation(request: TimeIntervalRequest, background_tasks: BackgroundTasks):
+    try:
+        request_id = str(uuid.uuid4())
+        plot_data = request.plot_request.dict()
+        plot_data_path = f"{data_dir}/{request.plot_request.file_name}_{request_id}_data.json"
+        
+        with open(plot_data_path, 'w') as f:
+            json.dump(plot_data, f)
+        
+        background_tasks.add_task(
+            start_docker_container_for_intervals,
+            height=request.plot_request.height,
+            dpi=request.plot_request.dpi,
+            request_id=request_id,
+            plot_data_path=plot_data_path,
+            start_time=request.start_time,
+            end_time=request.end_time,
+            interval_seconds=request.interval_seconds
         )
 
         return {"status": "success", "request_id": request_id}

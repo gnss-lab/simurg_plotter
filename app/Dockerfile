@@ -14,6 +14,7 @@ RUN pip install -r requirements.txt
 
 # Копируем скрипт plot_single.py из директории scripts в рабочую директорию контейнера
 COPY scripts/plot_single.py .
+COPY scripts/plot_multiple.py .
 
 # Команда по умолчанию при запуске контейнера
 CMD ["python", "plot_single.py"]
