@@ -2,73 +2,34 @@ import logging
 import os
 import uuid
 from fastapi import FastAPI, Form, HTTPException, BackgroundTasks, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 import json
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional, Union
 from fastapi.responses import FileResponse
-from docker_manager import start_docker_container, get_container_progress, delete_container_and_progress, start_docker_container_for_intervals
+from docker_manager import start_docker_container, get_container_progress, delete_container_and_progress, start_docker_container_for_intervals, count_images_in_directory, stop_and_clean_docker_containers
 import requests
 import aiohttp
 import asyncio
+import glob
+
+from schemas.schemas import PlotRequest, TimeIntervalRequest, CheckRequest
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # This allows all origins. Change this in production.
+    allow_credentials=True,
+    allow_methods=["*"],  # This allows all methods (GET, POST, etc).
+    allow_headers=["*"],  # This allows all headers.
+)
 
 logging.basicConfig(level=logging.INFO)
 
 data_dir = "./data"
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
-
-
-class PlotBase(BaseModel):
-    row: int = 0
-    col: int = 0
-    plot_type: str
-    data_file: str = "./data/dtec_2_10_2017_001_-90_90_N_-180_180_E_3d57.h5"
-    title: str
-    timestamp: str = "2017-01-01T00:00:00"
-    rowspan: int = 1
-    colspan: int = 1
-    colorbar: bool = True
-
-class Map2DPlot(PlotBase):
-    plot_type: str = "map2d"
-    product_type: str = "dtec_2_10"
-    min_lat: float = -90
-    max_lat: float = 90
-    min_lon: float = -180
-    max_lon: float = 180
-
-class GIMPlot(PlotBase):
-    plot_type: str = "gim"
-
-class IPPMercatorPlot(PlotBase):
-    plot_type: str = "ipp_mercator"
-
-class IPPPolarPlot(PlotBase):
-    plot_type: str = "ipp_polar"
-
-class DSTPlot(PlotBase):
-    plot_type: str = "dst"
-    delimiter: str = ','
-
-class PlotRequest(BaseModel):
-    height: int = 9
-    dpi: int = 300
-    file_name: str = "test"
-    nrows: int = 1
-    ncols: int = 1
-    plots: List[Union[Map2DPlot, GIMPlot, IPPMercatorPlot, IPPPolarPlot, DSTPlot]]
-
-class TimeIntervalRequest(BaseModel):
-    start_time: str
-    end_time: str
-    interval_seconds: int
-    plot_request: PlotRequest
-
-class CheckRequest(BaseModel):
-    email: str
-    url: str
 
 def checking_by_mail(mail: str):
     """ 
@@ -176,6 +137,25 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/get_request_progress/")
+def get_request_progress(request_id: str):
+    progress = get_container_progress(request_id)
+    return {"request_id": request_id, "progress": progress}
+
+@app.get("/download_result/")
+def download_result(request_id: str = None):
+    if request_id:
+        files = [f for f in os.listdir(data_dir) if f.endswith('.png') and request_id in f]
+
+    if not files:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = f"{data_dir}/{files[0]}"
+    delete_container_and_progress(request_id)
+
+    logging.info(f"Downloading result for request_id={request_id}: {files[0]}")
+    return FileResponse(path=file_path, filename=files[0], media_type='application/octet-stream')
+
 @app.post("/generate_archive_and_animation/")
 async def generate_archive_and_animation(request: TimeIntervalRequest, background_tasks: BackgroundTasks):
     try:
@@ -201,95 +181,98 @@ async def generate_archive_and_animation(request: TimeIntervalRequest, backgroun
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/list_graphs/")
-# def list_graphs():
-#     try:
-#         files = [f for f in os.listdir(data_dir) if f.endswith('.png')]
-#         return {"files": files}
-#     except FileNotFoundError:
-#         logging.error("Directory not found")
-#         raise HTTPException(status_code=404, detail="Directory not found")
-#     except Exception as e:
-#         logging.error(f"Error listing graphs: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
+@app.get("/get_archive_progress/")
+async def get_archive_progress(request_id: str):
+    try:
+        progress_file = f"./data/{request_id}_total.json"
+        with open(progress_file, 'r') as f:
+            total_images = json.load(f)["total"]
+        completed_images = 0
 
-# @app.get("/download_graph/")
-# def download_graph(filename: str):
-#     file_path = f"{data_dir}/{filename}"
-#     if os.path.exists(file_path):
-#         logging.info(f"Downloading graph: {filename}")
-#         return FileResponse(path=file_path, media_type='image/png', filename=filename)
-#     else:
-#         logging.error(f"File not found: {filename}")
-#         raise HTTPException(status_code=404, detail="File not found")
+        num_intervals = 4 
+        for i in range(num_intervals):
+            interval_dir = f"{data_dir}/{request_id}_interval{i}_data"
+            completed_images += count_images_in_directory(interval_dir)
 
-@app.get("/get_request_progress/")
-def get_request_progress(request_id: str):
-    progress = get_container_progress(request_id)
-    return {"request_id": request_id, "progress": progress}
 
-# @app.get("/get_request_logs/")
-# def get_request_logs(request_id: str):
-#     logs = get_container_logs(request_id)
-#     return {"request_id": request_id, "logs": logs}
+        # Calculate progress percentage
+        if total_images > 0:
+            progress = int((completed_images / total_images) * 100)
+        else:
+            progress = 0
 
-@app.get("/download_result/")
-def download_result(request_id: str = None, filename: str = None):
-    if request_id:
-        files = [f for f in os.listdir(data_dir) if f.endswith('.png') and request_id in f]
-    elif filename:
-        files = [filename] if os.path.exists(f"{data_dir}/{filename}") else []
+        return {"request_id": request_id, "progress": progress}
 
-    if not files:
-        raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting archive progress: {str(e)}")
 
-    file_path = f"{data_dir}/{files[0]}"
-    delete_container_and_progress(request_id)
+@app.get("/get_first_images/")
+async def get_first_images(request_id: str):
+    try:
+        num_intervals = 4
+        container_image_paths = []
 
-    logging.info(f"Downloading result for request_id={request_id}: {files[0]}")
-    return FileResponse(path=file_path, filename=files[0], media_type='application/octet-stream')
+        for i in range(num_intervals):
+            interval_dir = f"data/{request_id}_interval{i}_data"
+            interval_images = glob.glob(os.path.join(interval_dir, '*.png'))
+            if interval_images:
+                # Sort images to ensure consistent order (assuming names are in order or timestamped)
+                interval_images.sort()
+                first_image_path = interval_images[0]
+                container_image_paths.append(first_image_path)
 
-# @app.post("/range_start_date_end_date/")
-# async def set_date_range(
-#     request_id: str = Form(...),
-#     start_date: str = Form(...),
-#     end_date: str = Form(...)
-# ):
-#     try:
-#         download_data(request_id, start_date, end_date)
-#         return {"status": "success", "message": "Download started"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+        if not container_image_paths:
+            raise HTTPException(status_code=404, detail="No images found for the specified request_id")
 
-# @app.get("/check_download/")
-# def check_download(request_id: str):
-#     try:
-#         status = check_data_download(request_id)
-#         return {"status": "success", "download_status": status}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+        # Return the first images as downloadable files
+        first_images = []
+        for img_path in container_image_paths:
+            first_images.append(FileResponse(path=img_path, filename=os.path.basename(img_path), media_type='image/png'))
 
-# @app.post("/download_ok/")
-# def download_ok(request_id: str):
-#     try:
-#         process_data(request_id)
-#         return {"status": "success", "message": "Download verified and processing started"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+        return first_images
 
-# @app.get("/check_proc_status/")
-# def check_proc_status(request_id: str):
-#     try:
-#         status = get_container_status(request_id)
-#         return {"status": "success", "processing_status": status}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving first images: {str(e)}")
 
-# @app.get("/ok_tokens/")
-# def ok_tokens(request_id: str):
-#     try:
-#         # Dummy function to return tokens, can be replaced with actual logic
-#         tokens = {"token1": "value1", "token2": "value2"}
-#         return {"status": "success", "tokens": tokens}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+@app.get("/download_animation/")
+async def download_animation(request_id: str):
+    try:
+        animation_file = f"data/{request_id}_animation.gif"
+
+        if not os.path.exists(animation_file):
+            raise HTTPException(status_code=404, detail="Animation file not found. Processing might still be ongoing.")
+
+        # Return the animation file as a downloadable file
+        return FileResponse(path=animation_file, filename=os.path.basename(animation_file), media_type='image/gif')
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving animation: {str(e)}")
+
+@app.get("/download_images/")
+async def download_images(request_id: str):
+    try:
+        zip_file = f"data/{request_id}_images.zip"
+
+        if not os.path.exists(zip_file):
+            raise HTTPException(status_code=404, detail="Image ZIP file not found. Processing might still be ongoing.")
+
+        # Return the ZIP file as a downloadable file
+        return FileResponse(path=zip_file, filename=os.path.basename(zip_file), media_type='application/zip')
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving images: {str(e)}")
+
+@app.post("/stop_and_clean/")
+def stop_and_clean(request_id: str):
+    try:
+        stop_and_clean_docker_containers(request_id)
+        return {"status": "success", "message": f"Stopped and cleaned up containers for request_id={request_id}"}
+    except Exception as e:
+        logging.error(f"Error stopping and cleaning up containers for request_id={request_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

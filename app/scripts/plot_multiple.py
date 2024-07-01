@@ -97,14 +97,9 @@ def generate_plots(request_id, height, dpi, plot_data_path, output_file, timesta
                 dst_data = np.loadtxt(data_file, delimiter=plot.get('delimiter', ','))
                 plot_manager.plot_dst(row, col, dst_data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp)
 
-            progress = (i + 1) / total_plots * 100
-            update_progress(request_id, progress)
-
         plot_manager.save(f"./data/{output_file}")
-        update_progress(request_id, 100)
 
     except Exception as e:
-        update_progress(request_id, 0)
         raise e
 
 if __name__ == "__main__":

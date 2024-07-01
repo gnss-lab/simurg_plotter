@@ -102,6 +102,28 @@ async def wait_for_containers(containers):
 def build_animation(images, animation_file):
     imageio.mimsave(animation_file, images, duration=1.0)
 
+def count_images_in_directory(directory):
+    return len(glob.glob(os.path.join(directory, '*.png')))
+
+def calculate_total_images(start_time, end_time, interval_seconds, num_intervals=4):
+    start = datetime.fromisoformat(start_time)
+    end = datetime.fromisoformat(end_time)
+    
+    total_images = 0
+    
+    for i in range(num_intervals):
+        current_interval_start = start + i * (end - start) / num_intervals
+        current_interval_end = start + (i + 1) * (end - start) / num_intervals
+        num_timestamps = int((current_interval_end - current_interval_start).total_seconds() / interval_seconds)
+        total_images += num_timestamps
+    
+    return total_images
+
+def create_total_files(request_id, total):
+    progress_file = f"./data/{request_id}_total.json"
+    with open(progress_file, 'w') as f:
+        json.dump({"total": total}, f)
+
 async def start_docker_container_for_intervals(height, dpi, request_id, plot_data_path, start_time, end_time, interval_seconds):
     try:
         interval_start = datetime.fromisoformat(start_time)
@@ -110,7 +132,8 @@ async def start_docker_container_for_intervals(height, dpi, request_id, plot_dat
         # Calculate number of intervals
         num_intervals = 4
         interval_duration = (interval_end - interval_start) / num_intervals
-
+        total_files = calculate_total_images(start_time, end_time, interval_seconds)
+        create_total_files(request_id, total_files)
         # List to store tasks for started containers
         container_tasks = []
         data_dirs = []
@@ -145,17 +168,14 @@ async def start_docker_container_for_intervals(height, dpi, request_id, plot_dat
                 container_tasks.append(container)
                 data_dirs.append(data_dir_request)
 
-        # Gather results for all started containers
         await wait_for_containers(container_tasks)
 
-        # Collect image paths from all containers
         container_image_paths = []
         for i in range(num_intervals):
             interval_dir = f"{data_dir}/{request_id}_interval{i}_data"
             interval_images = glob.glob(os.path.join(interval_dir, '*.png'))
             container_image_paths.extend(interval_images)
 
-        # Create GIF animation from images of all containers
         animation_file = f"data/{request_id}_animation.gif"
         images = []
         for img_path in container_image_paths:
@@ -164,13 +184,11 @@ async def start_docker_container_for_intervals(height, dpi, request_id, plot_dat
 
         build_animation(images, animation_file)
 
-        # Create ZIP archive containing all images
         zip_file = f"data/{request_id}_images.zip"
         with zipfile.ZipFile(zip_file, 'w') as zf:
             for img_path in container_image_paths:
                 zf.write(img_path, os.path.basename(img_path))
 
-        # Return the path to the first image for user preview
         preview_image_path = container_image_paths[0] if container_image_paths else None
 
         return preview_image_path, animation_file, zip_file
@@ -178,6 +196,44 @@ async def start_docker_container_for_intervals(height, dpi, request_id, plot_dat
     except Exception as e:
         logging.error(f"Error in start_docker_container_for_intervals: {e}")
         raise e
+
+def stop_and_clean_docker_containers(request_id: str):
+    try:
+        num_intervals = 4
+        for i in range(num_intervals):
+            interval_request_id = f"{request_id}_interval{i}"
+            container_name = f"graph_generator_{interval_request_id}"
+            container = client.containers.get(container_name)
+            container.stop()
+            container.remove()
+            logging.info(f"Container for request_id={request_id} has been stopped and removed")
+            # Remove the associated progress file
+            progress_file = f"./data/{interval_request_id}_progress.json"
+            if os.path.exists(progress_file):
+                os.remove(progress_file)
+
+            request_file = f"./data/{interval_request_id}_data.json"
+            if os.path.exists(request_file):
+                os.remove(request_file)
+            # Remove the associated data directory
+            data_dir_request = f"{data_dir}/{interval_request_id}_data"
+            if os.path.exists(data_dir_request):
+                shutil.rmtree(data_dir_request)
+                logging.info(f"Data directory for interval_request_id={interval_request_id} has been removed")
+
+            
+
+        # Remove the total images file
+        total_file = f"./data/{request_id}_total.json"
+        if os.path.exists(total_file):
+            os.remove(total_file)
+            logging.info(f"Total images file for request_id={request_id} has been removed")
+
+    except docker.errors.NotFound:
+        logging.warning(f"Container for request_id={request_id} not found")
+    except Exception as e:
+        logging.error(f"Error stopping and cleaning up containers for request_id={request_id}: {e}")
+
 
 def get_container_progress(request_id):
     progress_file = f"./data/{request_id}_progress.json"
