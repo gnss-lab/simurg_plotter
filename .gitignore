@@ -3,3 +3,8 @@
 app/__pycache__/docker_manager.cpython-310.pyc
 app/__pycache__/docker_manager.cpython-310.pyc
 app/__pycache__/main.cpython-310.pyc
+/app/data
+/app/__pycache__
+/app/__pycache__
+/app/__pycache__
+/app/schemas/__pycache__
