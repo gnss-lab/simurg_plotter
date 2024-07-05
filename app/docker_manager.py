@@ -73,7 +73,7 @@ async def start_docker_container_multiple(height, dpi, request_id, plot_data_pat
             command=["python", "plot_multiple.py", str(height), str(dpi), request_id, plot_data_path, start_time, end_time, str(interval_seconds)],
             name=container_name,
             volumes=volume_bindings,
-            remove=False,
+            remove=True,
             detach=True  # Detach for asynchronous processing
         )
         logging.info(f"Docker container {container_name} started successfully")

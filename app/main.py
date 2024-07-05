@@ -4,16 +4,17 @@ import uuid
 from fastapi import FastAPI, Form, HTTPException, BackgroundTasks, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import json
-from pydantic import BaseModel
-from typing import Dict, Any, List, Optional, Union
 from fastapi.responses import FileResponse
 from docker_manager import start_docker_container, get_container_progress, delete_container_and_progress, start_docker_container_for_intervals, count_images_in_directory, stop_and_clean_docker_containers
 import requests
 import aiohttp
 import asyncio
 import glob
+import unlzw3
+import base64
+import time
 
-from schemas.schemas import PlotRequest, TimeIntervalRequest, CheckRequest
+from schemas.schemas import PlotRequest, TimeIntervalRequest, MAP2DRequest, GIMRequest
 
 app = FastAPI()
 
@@ -44,7 +45,41 @@ def checking_by_mail(mail: str):
                         )
     return rq.json()
 
-async def download_file(url, save_path, progress_file):
+import aiohttp
+import os
+
+async def download_file(url: str, save_path: str, progress_file: str):
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60*60)) as session:  # Увеличиваем общий тайм-аут до 1 часа
+            async with session.get(url) as response:
+                response.raise_for_status()  # Проверяем успешность ответа
+
+                total_size = int(response.headers.get('Content-Length', 0))
+                downloaded_size = 0
+
+                with open(save_path, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(8192):
+                        f.write(chunk)
+                        downloaded_size += len(chunk)
+
+                        progress = (downloaded_size / total_size) * 100
+                        with open(progress_file, 'w') as pfile:
+                            pfile.write(f'{int(progress)}')
+
+    except aiohttp.ClientError as e:
+        raise RuntimeError(f"Failed to download file: {e}")
+
+    except asyncio.TimeoutError:
+        raise RuntimeError("Download timed out")
+
+    except Exception as e:
+        raise RuntimeError(f"An error occurred: {e}")
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the random graph generator API"}
+
+async def download_gim_file(url, save_path, progress_file):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             response.raise_for_status()
@@ -63,55 +98,142 @@ async def download_file(url, save_path, progress_file):
                 pfile.write('100')
             os.remove(progress_file)
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the random graph generator API"}
 
-@app.post("/download_data_file/")
-async def download_data_file(request: CheckRequest, background_tasks: BackgroundTasks):
-    email = request.email
-    url = request.url
+async def uncompress_file(z_path, extract_to, progress_file):
     try:
-        id_from_url = url.split('id=')[1]
-    except IndexError:
-        raise HTTPException(status_code=400, detail="Invalid URL format")
-    queries = checking_by_mail(email)
+        with open(z_path, 'rb') as compressed_file, open(extract_to, 'wb') as uncompressed_file:
+            uncompressed_file.write(unlzw3.unlzw(compressed_file.read()))
+        
+        with open(progress_file, 'w') as pfile:
+            pfile.write('100')
+        os.remove(progress_file)
+    except Exception as e:
+        raise RuntimeError(f"Failed to uncompress {z_path}: {e}")
 
-    matching_query = next((query for query in queries if query['id'] == id_from_url), None)
+@app.post("/find_and_download_gim/")
+async def find_and_download_gim(request: GIMRequest, background_tasks: BackgroundTasks):
+    gim_sources_response = requests.get(
+        "https://api.simurg.space/datafiles/gim_list", 
+        params={"d": request.date}
+    )
+    if gim_sources_response.status_code != 200:
+        raise HTTPException(status_code=500, detail="Failed to get GIM source list")
 
-    if not matching_query:
-        raise HTTPException(status_code=404, detail="Query with the specified ID not found")
+    gim_sources = gim_sources_response.json()
+
+    if request.gim_type not in gim_sources:
+        raise HTTPException(status_code=404, detail=f"GIM type {request.gim_type} not found for the specified date")
+
+    gim_response = requests.get(
+        "https://api.simurg.space/datafiles/gim", 
+        params={"d": request.date, "gim_type": request.gim_type}
+    )
+    if gim_response.status_code != 200:
+        raise HTTPException(status_code=500, detail="Failed to download GIM file")
+
+    content_details = gim_response.headers["content-disposition"]
+    filename = content_details.replace("attachment; filename=", "").replace('"', '')
+    save_path = os.path.join('data', filename)
+    extract_to = os.path.join('data', filename.replace('.Z', ''))
+    request_id = str(uuid.uuid4())
+    progress_file = os.path.join('data', f'{request_id}.progress')
+
+    with open(save_path, 'wb') as f:
+        f.write(gim_response.content)
+    
+    background_tasks.add_task(uncompress_file, save_path, extract_to, progress_file)
+
+    return {"message": "Download and uncompress started", "file_name": filename.replace('.Z', ''), "request_id": request_id}
+
+@app.get("/get_gim_progress/")
+async def get_gim_progress(request_id: str):
+    try:
+        progress_file_path = os.path.join('data', f'{request_id}.progress')
+        max_attempts = 5
+        attempt = 0
+
+        while attempt < max_attempts:
+            if os.path.exists(progress_file_path):
+                with open(progress_file_path, 'r') as pfile:
+                    progress = pfile.read()
+                if progress == '100':
+                    os.remove(progress_file_path)
+                return {"progress": progress}
+            else:
+                time.sleep(1)
+                attempt += 1
+        return {"progress": "0"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting GIM progress: {str(e)}")
+
+
+
+@app.post("/find_and_download_map/")
+async def find_and_download_data(request: MAP2DRequest, background_tasks: BackgroundTasks):
+    queries = checking_by_mail(request.email)
+    
+    if request.url:
+        try:
+            id_from_url = request.url.split('id=')[1]
+        except IndexError:
+            raise HTTPException(status_code=400, detail="Invalid URL format")
+        
+        matching_query = next((query for query in queries if query['id'] == id_from_url), None)
+        
+        if not matching_query:
+            raise HTTPException(status_code=404, detail="Query with the specified ID not found")
+    else:
+        matching_query = next((query for query in queries if query['type'] == 'map' and query['begin'].startswith(request.date)), None)
+        
+        if not matching_query:
+            raise HTTPException(status_code=404, detail="Query with the specified date not found")
 
     file_path = matching_query['paths'].get('data')
-
     if not file_path:
         raise HTTPException(status_code=404, detail="Data file not found in the query results")
+    
     download_url = f"https://simurg.space/ufiles/{file_path}"
     save_directory = 'data'
     os.makedirs(save_directory, exist_ok=True)
     save_path = os.path.join(save_directory, os.path.basename(file_path))
-    progress_file = os.path.join(save_directory, f'{id_from_url}.progress')
+    request_id = str(uuid.uuid4())
+    progress_file = os.path.join(save_directory, f'{request_id}.progress')
     background_tasks.add_task(download_file, download_url, save_path, progress_file)
 
-    return {"message": "Download started", "file_name": os.path.basename(save_path)}
+    return {
+        "message": "Download started",
+        "file_name": os.path.basename(save_path),
+        "product_type": matching_query['options'].get('product_type', ''),
+        "minlat": matching_query['coordinates'].get('minlat', -90),
+        "maxlat": matching_query['coordinates'].get('maxlat', 90),
+        "minlon": matching_query['coordinates'].get('minlon', -180),
+        "maxlon": matching_query['coordinates'].get('maxlon', 180),
+        "request_id": request_id
+    }
 
 
-@app.get("/download_progress/")
-async def get_progress(url: str):
-    try:
-        id_from_url = url.split('id=')[1]
-    except IndexError:
-        raise HTTPException(status_code=400, detail="Invalid URL format")
+@app.get("/get_map2d_progress/")
+async def get_download_progress(request_id: str):
+    progress_file_path = os.path.join('data', f'{request_id}.progress')
     
-    progress_file_path = os.path.join('data', f'{id_from_url}.progress')
-    if os.path.exists(progress_file_path):
-        with open(progress_file_path, 'r') as pfile:
-            progress = pfile.read()
-        if progress == '100':
-            os.remove(progress_file_path)
-        return {"progress": progress}
-    else:
-        return {"progress": "100"}
+    # Number of attempts to check for the file creation
+    max_attempts = 5
+    attempt = 0
+
+    while attempt < max_attempts:
+        if os.path.exists(progress_file_path):
+            with open(progress_file_path, 'r') as pfile:
+                progress = pfile.read()
+            if progress == '100':
+                os.remove(progress_file_path)
+            return {"progress": progress}
+        else:
+            time.sleep(1)  # Wait for 1 second before checking again
+            attempt += 1
+    
+    # If the file does not exist after max_attempts
+    return {"progress": "0"}
 
 @app.post("/generate_plot/")
 async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks):
@@ -137,12 +259,12 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/get_request_progress/")
+@app.get("/get_plot_progress/")
 def get_request_progress(request_id: str):
     progress = get_container_progress(request_id)
     return {"request_id": request_id, "progress": progress}
 
-@app.get("/download_result/")
+@app.get("/download_plot/")
 def download_result(request_id: str = None):
     if request_id:
         files = [f for f in os.listdir(data_dir) if f.endswith('.png') and request_id in f]
@@ -186,7 +308,7 @@ async def get_archive_progress(request_id: str):
     try:
         progress_file = f"./data/{request_id}_total.json"
         with open(progress_file, 'r') as f:
-            total_images = json.load(f)["total"]
+            total_images = json.load(f)["total"]+2
         completed_images = 0
 
         num_intervals = 4 
@@ -194,8 +316,10 @@ async def get_archive_progress(request_id: str):
             interval_dir = f"{data_dir}/{request_id}_interval{i}_data"
             completed_images += count_images_in_directory(interval_dir)
 
-
-        # Calculate progress percentage
+        zip_file = f"{data_dir}/{request_id}_images.zip"
+        gif_file = f"{data_dir}/{request_id}_animation.gif"
+        if zip_file and gif_file:
+            completed_images += 2
         if total_images > 0:
             progress = int((completed_images / total_images) * 100)
         else:
@@ -216,7 +340,6 @@ async def get_first_images(request_id: str):
             interval_dir = f"data/{request_id}_interval{i}_data"
             interval_images = glob.glob(os.path.join(interval_dir, '*.png'))
             if interval_images:
-                # Sort images to ensure consistent order (assuming names are in order or timestamped)
                 interval_images.sort()
                 first_image_path = interval_images[0]
                 container_image_paths.append(first_image_path)
@@ -224,12 +347,13 @@ async def get_first_images(request_id: str):
         if not container_image_paths:
             raise HTTPException(status_code=404, detail="No images found for the specified request_id")
 
-        # Return the first images as downloadable files
-        first_images = []
+        encoded_images = []
         for img_path in container_image_paths:
-            first_images.append(FileResponse(path=img_path, filename=os.path.basename(img_path), media_type='image/png'))
+            with open(img_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                encoded_images.append(encoded_string)
 
-        return first_images
+        return encoded_images
 
     except HTTPException as e:
         raise e

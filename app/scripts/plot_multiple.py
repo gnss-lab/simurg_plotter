@@ -86,7 +86,7 @@ def generate_plots(request_id, height, dpi, plot_data_path, output_file, timesta
                 plot_manager.plot_map2d(row, col, data, title=title, colspan=colspan, rowspan=rowspan, time=timestamp, product_type=product_type, polar=False, subsolar=True, min_lat=plot.get('min_lat', None), max_lat=plot.get('max_lat', None), min_lon=plot.get('min_lon', None), max_lon=plot.get('max_lon', None), colorbar=plot.get('colorbar', False))
             elif plot_type == Plots.GIM:
                 gim_data = load_gim_data(data_file)
-                plot_manager.plot_gim(row, col, gim_data[timestamp], title=title, colspan=colspan, rowspan=rowspan, time=timestamp, colorbar=plot.get('colorbar', False))
+                plot_manager.plot_gim(row, col, gim_data[timestamp], title=f"GIM {timestamp}", colspan=colspan, rowspan=rowspan, time=timestamp, colorbar=plot.get('colorbar', False))
             elif plot_type == Plots.IPP_MERCATOR:
                 ipp_data = extract_series_data(data_file)
                 plot_manager.plot_ipp_merc(row, col, ipp_data, title=title, colspan=colspan, rowspan=rowspan)

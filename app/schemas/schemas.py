@@ -47,6 +47,11 @@ class TimeIntervalRequest(BaseModel):
     interval_seconds: int
     plot_request: PlotRequest
 
-class CheckRequest(BaseModel):
+class MAP2DRequest(BaseModel):
     email: str
-    url: str
+    date: str = "2017-01-01"
+    url: str = None
+
+class GIMRequest(BaseModel):
+    date: str = "2017-01-01"
+    gim_type: str = "uqrg"
