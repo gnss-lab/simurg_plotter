@@ -38,8 +38,8 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data_path)
             command=["python", "plot_single.py", str(height), str(dpi), output_file, plot_data_path, request_id],
             name=container_name,
             volumes=volume_bindings,
-            remove=False,
-            detach=False
+            remove=True,
+            detach=True
         )
         logging.info(f"Docker container {container_name} finished successfully")
     except docker.errors.ContainerError as e:
