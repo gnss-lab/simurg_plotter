@@ -80,75 +80,81 @@ def read_root():
     return {"message": "Welcome to the random graph generator API"}
 
 async def download_gim_file(url, save_path, progress_file):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            response.raise_for_status()
-            total = int(response.headers.get('content-length', 0))
-            downloaded = 0
-            with open(save_path, 'wb') as f:
-                async for chunk in response.content.iter_chunked(8192):
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    percent = int(downloaded / total * 100)
-                    with open(progress_file, 'w') as pfile:
-                        pfile.write(f'{percent}')
-                    await asyncio.sleep(0)
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                total = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                with open(save_path, 'wb') as f:
+                    async for chunk in response.content.iter_chunked(8192):
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        percent = int(downloaded / total * 100)
+                        with open(progress_file, 'w') as pfile:
+                            pfile.write(f'{percent}')
+                        await asyncio.sleep(0)
 
-            with open(progress_file, 'w') as pfile:
-                pfile.write('100')
-            os.remove(progress_file)
-
+                with open(progress_file, 'w') as pfile:
+                    pfile.write('100')
+    except Exception as e:
+        with open(progress_file, 'w') as pfile:
+            pfile.write('error')
+        raise RuntimeError(f"Failed to download file: {e}")
 
 async def uncompress_file(z_path, extract_to, progress_file):
     try:
         with open(z_path, 'rb') as compressed_file, open(extract_to, 'wb') as uncompressed_file:
             uncompressed_file.write(unlzw3.unlzw(compressed_file.read()))
-        
         with open(progress_file, 'w') as pfile:
             pfile.write('100')
-        os.remove(progress_file)
     except Exception as e:
+        with open(progress_file, 'w') as pfile:
+            pfile.write('error')
         raise RuntimeError(f"Failed to uncompress {z_path}: {e}")
 
 @app.post("/find_and_download_gim/")
 async def find_and_download_gim(request: GIMRequest, background_tasks: BackgroundTasks):
-    gim_sources_response = requests.get(
-        "https://api.simurg.space/datafiles/gim_list", 
-        params={"d": request.date}
-    )
-    if gim_sources_response.status_code != 200:
-        raise HTTPException(status_code=500, detail="Failed to get GIM source list")
+    try:
+        gim_sources_response = requests.get(
+            "https://api.simurg.space/datafiles/gim_list",
+            params={"d": request.date}
+        )
+        gim_sources_response.raise_for_status()
 
-    gim_sources = gim_sources_response.json()
+        gim_sources = gim_sources_response.json()
+        if request.gim_type not in gim_sources:
+            raise HTTPException(status_code=404, detail=f"GIM type {request.gim_type} not found for the specified date")
 
-    if request.gim_type not in gim_sources:
-        raise HTTPException(status_code=404, detail=f"GIM type {request.gim_type} not found for the specified date")
+        gim_response = requests.get(
+            "https://api.simurg.space/datafiles/gim",
+            params={"d": request.date, "gim_type": request.gim_type}
+        )
+        gim_response.raise_for_status()
 
-    gim_response = requests.get(
-        "https://api.simurg.space/datafiles/gim", 
-        params={"d": request.date, "gim_type": request.gim_type}
-    )
-    if gim_response.status_code != 200:
-        raise HTTPException(status_code=500, detail="Failed to download GIM file")
+        content_details = gim_response.headers["content-disposition"]
+        filename = content_details.replace("attachment; filename=", "").replace('"', '')
+        save_path = os.path.join(data_dir, filename)
+        extract_to = os.path.join(data_dir, filename.replace('.Z', ''))
+        request_id = str(uuid.uuid4())
+        progress_file = os.path.join(data_dir, f'{request_id}.progress')
 
-    content_details = gim_response.headers["content-disposition"]
-    filename = content_details.replace("attachment; filename=", "").replace('"', '')
-    save_path = os.path.join('data', filename)
-    extract_to = os.path.join('data', filename.replace('.Z', ''))
-    request_id = str(uuid.uuid4())
-    progress_file = os.path.join('data', f'{request_id}.progress')
+        with open(save_path, 'wb') as f:
+            f.write(gim_response.content)
 
-    with open(save_path, 'wb') as f:
-        f.write(gim_response.content)
-    
-    background_tasks.add_task(uncompress_file, save_path, extract_to, progress_file)
+        background_tasks.add_task(uncompress_file, save_path, extract_to, progress_file)
 
-    return {"message": "Download and uncompress started", "file_name": filename.replace('.Z', ''), "request_id": request_id}
+        return {"message": "Download and uncompress started", "file_name": filename.replace('.Z', ''), "request_id": request_id}
+
+    except requests.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"HTTP error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
 
 @app.get("/get_gim_progress/")
 async def get_gim_progress(request_id: str):
     try:
-        progress_file_path = os.path.join('data', f'{request_id}.progress')
+        progress_file_path = os.path.join(data_dir, f'{request_id}.progress')
         max_attempts = 5
         attempt = 0
 
@@ -158,14 +164,17 @@ async def get_gim_progress(request_id: str):
                     progress = pfile.read()
                 if progress == '100':
                     os.remove(progress_file_path)
+                elif progress == 'error':
+                    raise HTTPException(status_code=500, detail="Error occurred during processing")
                 return {"progress": progress}
             else:
-                time.sleep(1)
+                await asyncio.sleep(0.5)
                 attempt += 1
         return {"progress": "0"}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting GIM progress: {str(e)}")
+
 
 
 
@@ -241,22 +250,43 @@ async def generate_plot(request: PlotRequest, background_tasks: BackgroundTasks)
         request_id = str(uuid.uuid4())
         output_file = f"{request.file_name}_{request_id}.png"
         plot_data = request.dict()
+        logging.info(f"Received plot data: {plot_data}")
+        
+        # Ensuring the data directory exists
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+            logging.info(f"Created data directory: {data_dir}")
+        
         plot_data_path = f"{data_dir}/{request.file_name}_{request_id}_data.json"
-        
-        with open(plot_data_path, 'w') as f:
-            json.dump(plot_data, f)
-        
-        background_tasks.add_task(
-            start_docker_container,
-            height=request.height,
-            dpi=request.dpi,
-            output_file=output_file,
-            request_id=request_id,
-            plot_data_path=plot_data_path
-        )
+        logging.info(f"Plot data path: {plot_data_path}")
+
+        # Writing plot data to a file
+        try:
+            with open(plot_data_path, 'w') as f:
+                json.dump(plot_data, f)
+            logging.info(f"Plot data file created: {plot_data_path}")
+        except Exception as e:
+            logging.error(f"Failed to create plot data file: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to create plot data file: {e}")
+
+        # Adding the background task
+        try:
+            background_tasks.add_task(
+                start_docker_container,
+                height=request.height,
+                dpi=request.dpi,
+                output_file=output_file,
+                request_id=request_id,
+                plot_data_path=plot_data_path
+            )
+            logging.info(f"Background task for Docker container started")
+        except Exception as e:
+            logging.error(f"Failed to start background task: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to start background task: {e}")
 
         return {"status": "success", "request_id": request_id}
     except Exception as e:
+        logging.error(f"Unexpected error in generate_plot: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/get_plot_progress/")

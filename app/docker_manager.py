@@ -22,6 +22,10 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data_path)
     try:
         data_dir_request = f"{data_dir}/{request_id}_data"
         os.makedirs(data_dir_request, exist_ok=True)
+        progress_file = f"./data/{request_id}_progress.json"
+        with open(progress_file, 'w') as f:
+            json.dump({"progress": 0}, f)
+        
 
         logging.info(plot_data_path)
 
@@ -38,7 +42,7 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data_path)
             command=["python", "plot_single.py", str(height), str(dpi), output_file, plot_data_path, request_id],
             name=container_name,
             volumes=volume_bindings,
-            remove=True,
+            remove=False,
             detach=True
         )
         logging.info(f"Docker container {container_name} finished successfully")
@@ -49,8 +53,8 @@ def start_docker_container(height, dpi, output_file, request_id, plot_data_path)
     except docker.errors.APIError as e:
         logging.error(f"API error: {e}")
     finally:
-        if os.path.exists(plot_data_path):
-            os.remove(plot_data_path)
+        # if os.path.exists(plot_data_path):
+        #     os.remove(plot_data_path)
         if os.path.exists(data_dir_request):
             shutil.rmtree(data_dir_request)
 
@@ -73,7 +77,7 @@ async def start_docker_container_multiple(height, dpi, request_id, plot_data_pat
             command=["python", "plot_multiple.py", str(height), str(dpi), request_id, plot_data_path, start_time, end_time, str(interval_seconds)],
             name=container_name,
             volumes=volume_bindings,
-            remove=True,
+            remove=False,
             detach=True  # Detach for asynchronous processing
         )
         logging.info(f"Docker container {container_name} started successfully")
